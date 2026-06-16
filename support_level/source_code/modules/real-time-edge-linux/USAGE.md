@@ -12,21 +12,21 @@
 3. 只读检查可直接在这里做
 4. 要改、要编、要出 `Image/dtb/modules`，复制到 `../../work/<case>/` 再做
 
-## 已吸收：`real-time-edge-linux-build` source/bootstrap 角色
+## 已吸收：`real-time-edge-linux-build` 源码 / 初始化角色
 
-这条 helper 的稳定 owner 不是 runtime，也不是 patch owner，
+这条 helper 的稳定定位不是运行态，也不是 patch 入口，
 而是：
 
-- reusable source baseline
-- release tag mapping
-- A-core toolchain mapping
-- minimum proof that the tree is build-ready
+- 可复用源码基线
+- release tag 映射
+- A-core 工具链映射
+- 证明这棵源码树已经具备最小可构建条件
 
 关键边界：
 
-- shared baseline 放在可复用根
-- 真正 build / patch 在 case-local copy 里做
-- tag、toolchain family、source line 要显式映射
+- 共享基线放在可复用根
+- 真正构建 / patch 在 case 本地副本里做
+- tag、工具链家族、源码线都要显式映射
 
 ## 已吸收：`imx943-linux` 的 `RTE` 分支认知
 
@@ -39,10 +39,10 @@
 
 所以这里第一轮吸收的是：
 
-- `RTE Linux` 的 source/bootstrap owner
-- 版本到 toolchain family 的映射边界
+- `RTE Linux` 的源码 / 初始化入口
+- 版本到工具链家族的映射边界
 
-而不是“在这里直接承诺所有 case-ready recipe”
+而不是“在这里直接承诺所有 case-ready 操作手册”
 
 ## 待补全
 

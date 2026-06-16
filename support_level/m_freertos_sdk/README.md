@@ -26,3 +26,33 @@
 - 编译输出
 - 临时 patch
 - case 级日志
+
+## 当前已吸收的 SDK 编译边界
+
+这里虽然主要放的是 SDK 发布压缩包资产，
+但和 SDK 编译直接相关、又不该写进某块板 `board_knowledge` 的规则，
+也可以先在这里收编译边界，再由具体源码模块手册继续细化。
+
+### `i.MX8DXL` `M4` 构建边界
+
+对 `i.MX8DXL M4`：
+
+- 除非明确要求 `NOR flash` 或其他 flash 链接构建方式，
+  默认优先非 `flash` linker / build 方式
+- 名字里带：
+  `flash_debug`
+  `flash_release`
+  `*_flash.ld`
+  默认视为 flash-linked
+- 名字里带：
+  `debug`
+  `release`
+  `*_ram.ld`
+  默认视为 RAM / TCM 装载方式
+- 如果当前目标是 `flash_m4` 打包产物，
+  优先标准目标：
+  `make SOC=iMX8DXL REV=A1 flash_m4`
+- 不要默认直接调用 `mkimage_imx8`
+
+这类内容属于 SDK / M 核编译边界，
+不属于某一块板的板级默认事实。

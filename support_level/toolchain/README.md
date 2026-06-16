@@ -1,6 +1,6 @@
 # toolchain
 
-这里放长期复用的交叉编译工具链和相关 host-side 编译输入。
+这里放长期复用的交叉编译工具链和相关主机侧编译输入。
 
 它回答的是：
 
@@ -32,7 +32,7 @@
 - `gcc-arm-none-eabi-9-2019-q4-major/`
   旧版 `arm-none-eabi`
 - `zephyr-sdk-1.0.1/`
-  Zephyr lane
+  Zephyr 相关链路
 
 ## 当前长期边界
 
@@ -48,8 +48,8 @@
 
 更偏向 M-core / firmware side。
 
-所以对 `flash.bin` 打包链，尤其是 `i.MX95 RTE 3.3` 这种 lane，
-必须先把 A-core / M-core toolchain owner 分清。
+所以对 `flash.bin` 打包链，尤其是 `i.MX95 RTE 3.3` 这种链路，
+必须先把 A-core / M-core 工具链的归属分清。
 
 ## 已吸收：`imx95-rte33-build-flashbin` 的 toolchain 边界
 
@@ -72,10 +72,10 @@
 
 ## 当前推荐读取方式
 
-如果任务是 boot-firmware / `flash.bin`：
+如果任务是 启动固件 / `flash.bin`：
 
 1. 先读当前任务相关模块的 `USAGE.md`
-2. 再回到这里确认 toolchain owner
+2. 再回到这里确认工具链归属
 3. 最后才去实际跑构建命令
 
 如果任务是 `i.MX95 RTE 3.3 flash.bin`，
@@ -90,5 +90,5 @@
 
 - 不要把 `toolchain/` 当成源码目录
 - 不要把“存在多个版本”误当成“可以随便混用”
-- 不要默认旧版 `gcc-arm-none-eabi-9-2019-q4-major` 就是所有 M-core lane 的优先选择
-- 对 output-affecting 的 lane，不要把 toolchain 选择写成模糊默认值
+- 不要默认旧版 `gcc-arm-none-eabi-9-2019-q4-major` 就是所有 M-core 链路的优先选择
+- 对会影响输出结果的链路，不要把工具链选择写成模糊默认值

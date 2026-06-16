@@ -2,7 +2,7 @@
 
 - 程序入口：`./uuu`
 - 当前版本：`libuuu_1.5.243-0-g230f1b1`
-- 工具角色：USB transport / 下载态探测 / raw image 写入 / FAT 文件写入
+- 工具角色：USB 传输、下载态探测、原始启动镜像写入、FAT 文件写入
 
 ## 先读什么
 
@@ -11,10 +11,10 @@
 1. 当前板是否真的处在期望 USB 状态
 2. 当前要操作的是：
    - 下载态探测
-   - raw boot image
-   - FAT runtime file
-3. 当前文件的 artifact class 是否已经分清
-4. 这次要证明的是 transport，还是后续 runtime
+   - 原始启动镜像
+   - FAT 运行时文件
+3. 当前文件的产物类别是否已经分清
+4. 这次要证明的是传输是否成立，还是后续运行态是否成立
 
 ## 典型命令形态
 
@@ -31,7 +31,7 @@
 ./uuu -lsusb
 ```
 
-常见 built-in script：
+常见内置脚本：
 
 ```bash
 ./uuu -b sd <flash.bin>
@@ -41,16 +41,16 @@
 
 ## 使用边界
 
-- `uuu` 是 transport owner，不是 runtime proof owner
-- `-b sd` 常用于 raw boot image
-- `-b fat_write` 常用于 `Image` / `dtb` / `.ko` 这类 FAT runtime file
-- 不要把 `imx-mkimage` boot image 误当成 `fat_write` 文件
+- `uuu` 负责的是传输动作，不负责运行态验证
+- `-b sd` 常用于原始启动镜像
+- `-b fat_write` 常用于 `Image` / `dtb` / `.ko` 这类 FAT 运行时文件
+- 不要把 `imx-mkimage` 产出的启动镜像误当成 `fat_write` 文件
 
 ## 当前注意事项
 
-- 同样是 `uuu -b sd`，从 `SDPS` 开始和复用 live `FB` session，不是同一种证明
-- `uuu` 成功返回，只能先说明 transport / write 成立，不自动证明 Linux / login / runtime owner 已接管
-- 板型相关的 USB 枚举解释、first-stage / second-stage relay 语义，不写在这里，去对应板级层读取
+- 同样是 `uuu -b sd`，从 `SDPS` 开始和复用当前 `FB` 会话，不是同一种验证
+- `uuu` 成功返回，只能先说明传输和写入成立，不自动证明 Linux、登录或运行态已经接管
+- 板型相关的 USB 枚举解释、第一阶段 / 第二阶段中继语义，不写在这里，去对应板级文档读取
 
 当前已拆进 `board_knowledge/` 的板型入口：
 

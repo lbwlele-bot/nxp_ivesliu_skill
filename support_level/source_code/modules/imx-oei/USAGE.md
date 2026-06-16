@@ -3,7 +3,7 @@
 - 真实源码目录：`./imx-oei/`
 - 当前参考分支：`master`
 - 当前参考版本：`lf-6.18.2-1.0.0`
-- 主要链路：`boot-firmware`
+- 主要链路：`启动固件`
 
 ## 使用规则
 
@@ -30,20 +30,20 @@
 
 对 `i.MX95 RTE 3.3 flash.bin`：
 
-- `OEI` 是 output-affecting identity 的关键来源之一
+- `OEI` 是 会影响输出结果的身份 的关键来源之一
 - 重点不是“有没有 `oei-m33-ddr.bin`”
 - 而是它是否真的是目标 revision 对应的 `OEI`
 
 关键点：
 
-- 已验证 lane 要求 `r=B0`
+- 已验证 链路 要求 `r=B0`
 - 要优先检查 `build/mx95lp5/ddr/build_info.h`
 - 应看到：
   `MIMX95(B0)`
 
 高风险误区：
 
-- 某些看起来像 transport / `uuu` 的失败，实际应先怀疑 `OEI` revision 选错
+- 某些看起来像 传输 / `uuu` 的失败，实际应先怀疑 `OEI` revision 选错
 
 ## 待补全
 

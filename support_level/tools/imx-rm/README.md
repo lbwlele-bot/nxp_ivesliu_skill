@@ -1,9 +1,12 @@
 # imx-rm
 
-`imx-rm` is a lightweight helper for large i.MX reference manuals stored under
-`/home/ives/桌面/NXP/pre_download/RM`.
+`imx-rm` 是一个给大体积 `i.MX` 参考手册用的轻量辅助工具。
 
-It avoids whole-document loading by building a sidecar index next to each PDF:
+它面向的是参考手册 PDF，
+作用不是整本打开，而是先在 PDF 旁边建立一套索引和缓存，
+这样后面查目录、查章节、查主题时，不用每次都重新扫整本手册。
+
+当前索引侧文件包括：
 
 - `meta.json`
 - `toc.json`
@@ -12,9 +15,11 @@ It avoids whole-document loading by building a sidecar index next to each PDF:
 - `topic_bundles.json`
 - `cache/sections/`
 - `cache/worksets/`
-- a merged alias and ontology layer that combines shared defaults with chip-specific overlays
 
-## Commands
+另外还有一层共享别名和术语映射，
+会把共用默认词表和芯片自己的补充词表合并起来。
+
+## 常见命令
 
 ```bash
 /home/ives/桌面/NXP/tools/imx-rm/imx-rm list
@@ -32,17 +37,15 @@ It avoids whole-document loading by building a sidecar index next to each PDF:
 /home/ives/桌面/NXP/tools/imx-rm/imx-rm workset imx943 boot-path
 ```
 
-## Notes
+## 说明
 
-- The command name is `imx-rm`, not `rm`, to avoid clobbering the system
-  delete command.
-- The current lookup phase is intentionally deterministic and TOC-driven.
-- `list`, `lookup`, `extract`, and `workset` support `--json` for skill-facing
-  calls.
-- `lookup`, `extract`, and `workset` JSON now carry machine-facing reason
-  fields such as `matched_by`, `consult_reason`, `selected_by`, and
-  `topic_inference`.
-- The shared vocabulary now lives in [ontology.json](/home/ives/桌面/NXP/tools/imx-rm/ontology.json)
-  and is merged with each chip's sidecar aliases during index build.
-- Worksets are cached as Markdown plus JSON so later agents can summarize from
-  a bounded evidence set instead of reopening the full PDF.
+- 命令名是 `imx-rm`，不是 `rm`，避免和系统删除命令冲突。
+- 当前查询阶段故意保持确定性，主要按目录结构和主题索引来查。
+- `list`、`lookup`、`extract`、`workset` 都支持 `--json`，方便给 skill 或脚本调用。
+- `lookup`、`extract`、`workset` 返回的 JSON 里会带一些机器可读的原因字段，
+  例如 `matched_by`、`consult_reason`、`selected_by`、`topic_inference`。
+- 共享术语表放在 [ontology.json](/home/ives/桌面/NXP_v2/support_level/tools/imx-rm/ontology.json)，
+  建索引时会和每颗芯片自己的别名文件一起合并。
+- `workset` 会同时缓存 Markdown 和 JSON，
+  这样后续 agent 可以在一个有界证据集上继续总结，
+  不必重新整本打开 PDF。

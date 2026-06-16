@@ -3,9 +3,9 @@
 这是用户**唯一固定使用**的工作区。每次新对话开场先读本文件，了解"这里是干什么的、
 规矩是什么、该走哪个 skill"，再开始干活。具体怎么做的细节在各 skill 里（按需加载）。
 
-## 当前迁移任务
+## 第一轮迁移状态
 
-这部分是临时迁移说明。
+这部分是临时过渡说明。
 等整个 v2 架构彻底稳定后，这一节应从 `AGENTS.md` 删除。
 
 当前状态：
@@ -13,24 +13,16 @@
 - 旧系统 skill 资产的第一轮吸收已经完成
 - 这里保留这段，不是因为第一轮还没做完，而是为了提醒后续 agent：
   v2 的长期结构已经定了
-  后面做的是架构细化，不是再回到旧 skill 平移
+  当前做的是架构细化，不是继续补“第一轮迁移”
+  也不是再回到旧 skill 平移
 - 仍然坚持：
   不把旧 skill 当成最终形态直接平移
   先按源码模块拆，再把可复用操作说明沉淀到模块旁边的 `USAGE.md`
 - 当前源码长期形态是：
   `../support_level/source_code/modules/<module>/USAGE.md`
   `../support_level/source_code/modules/<module>/<real-source-tree>/`
-- 从旧系统复制过来但还没拆清的源码资产，先放：
-  `../support_level/source_code/_to_absorb/`
-- 对 toolchain / firmware 这类非源码支撑资产，优先读：
-  `../support_level/toolchain/README.md`
-  `../support_level/firmware/README.md`
-- 对 `m_freertos_sdk/`：
-  它是 NXP SDK 发布压缩包资产，不是普通 clone 下来的源码基线
-  先看本地已有版本
-  没有目标版本时，不要自己上网下载，先找用户要
 
-第一轮吸收已确定的长期主线：
+第一轮迁移已经确定的长期主线：
 
 1. 先从 `boot-firmware` / `flash.bin` 家族开始
 2. 第一轮已覆盖范围：
@@ -38,20 +30,11 @@
    `imx943`
    `imx95`
    `imx8dxl`
-3. 这条链优先继续写实这些模块：
-   `imx-mkimage`
-   `imx-atf`
-   `uboot-imx`
-   `real-time-edge-uboot`
-   `imx-oei`
-   `imx-sm`
-   `imx-optee-os`
 
-迁移阶段额外规则：
+当前细化阶段额外规则：
 
 - 遇到旧 skill，先判断它依赖哪些源码模块
 - 先读模块 `USAGE.md`，再读真实源码
-- 如果某资料还在 `_to_absorb/`，要明确说它仍在待拆，不当成稳定长期入口
 - 在 v2 架构还没彻底细化稳定前，不要把旧系统的大而混的源码组织方式继续固化到新系统
 
 ## 这个工作区是干什么的
@@ -68,7 +51,7 @@
 | skill | 何时用 |
 |-------|--------|
 | `understanding` | 理解层。用于沉淀会改变判断方式的高阶抽象，例如 `flash.bin` 的阶段角色、`uuu` 的状态迁移本质、`M` 核启动 owner 分层等。 |
-| `support-level` | 找镜像/固件/手册/原理图/工具/源码——查它们各在哪、怎么用。 |
+| `support` | 找镜像/固件/手册/原理图/工具/源码——查它们各在哪、各自负责什么。 |
 | `compile` | 编译阶段：理运行链路、定最小模块集合、在本机出产物/镜像。 |
 | `board-exec` | 板级执行阶段：在本机烧写、抓串口、看板子运行，并维护板级状态机。 |
 
@@ -82,40 +65,19 @@
 
 ### 本地有哪些资源能用
 
-先去 `support-level` 看本地共享资源：
+资源定位、共享资产位置、已有基线、已有工具、已有文档，默认先走
+`support`。
 
-- `../support_level/Image/`
-- `../support_level/SoC_material/`
-- `../support_level/board_knowledge/`
-- `../support_level/tools/`
-- `../support_level/linux_document/`
-- `../support_level/source_code/`
-- `../support_level/m_freertos_sdk/`
-- `../support_level/toolchain/`
-- `../support_level/firmware/`
-- `../support_level/work/`
+不要在入口层自己展开目录遍历；
+由 `support` 去回答：
 
-当前 v2 已完成第一批长期资产复制：
+- 当前支撑层里都有什么
+- 各资源分别负责什么
+- 它们放在什么位置
 
-- `tools`
-- `source_code`
-- `m_freertos_sdk`
-- `toolchain`
-- `Image`
-- `firmware`
-- `SoC_material` 下现有 RM
-- `board_knowledge` 下逐板沉淀的板级操作支撑知识
+只有在 `support` 已经把位置和 owner 说清以后，
+才进入对应下层文档或目录。
 
-其中要特别区分：
-
-- `source_code/`
-  放按模块组织的共享源码基线
-- `m_freertos_sdk/`
-  放 NXP 发布的 SDK 压缩包资产
-  不是普通 Git 源码树
-  没有目标版本时先找用户要，不要自己上网下载
-
-所以默认先查新的 `support_level/`。
 旧根只在缺项追溯或核对来源时再回看。
 
 ### 办事步骤
@@ -152,16 +114,30 @@
 
 #### 第 3 步：理解需求
 
-把大需求拆成可执行的小问题，先判断当前缺的是哪类：
+先读 `understanding`。
 
-- 缺资料 -> 先去 `support-level`
-- 缺产物/镜像 -> 进 `compile`
-- 缺板子状态或上板验证 -> 进 `board-exec`
-- 缺抽象理解、问题定义、经验判断 -> 看 `understanding`
+理解需求不是简单地按“缺什么补什么”。
+更准确地说，是先判断当前问题涉及哪一层，
+再去相应 skill 看本地是否已经有相关资料、规则、经验或支撑资产。
+
+默认顺序：
+
+- 先读 `understanding`
+  明确当前问题属于什么阶段、什么 owner、什么运行角色
+- 涉及资源位置、已有资料、已有工具、已有源码或已有基线
+  -> 进 `support`
+- 涉及产物链路、模块归属、编译输入、构建动作
+  -> 进 `compile`
+- 涉及真实板子状态、烧写、串口、复位、启动、登录验证
+  -> 进 `board-exec`
 
 #### 第 4 步：编译
 
-需要准备产物时，进入 `compile`。
+当任务已经明确落到“准备/复用/确认产物链路”这一层时，
+进入 `compile`。
+
+这里说的不是一个孤立命令，
+而是进入 `compile` 这个 skill 及其背后的模块化源码说明、构建边界和相关支撑层资料。
 
 #### 第 5 步：板级执行
 
@@ -182,7 +158,7 @@
 
 - 任何任务先按本文件推进，不要一上来就闷头做完——带着用户一步步推进，每步先对齐。
 - 信息不全先问，不替用户猜芯片 / 版本 / 板卡状态 / 路径。
-- 找镜像 / 资料 / 工具 / 源码先查 `support-level`，找不到再问用户，不编路径。
+- 找镜像 / 资料 / 工具 / 源码先查 `support`，找不到再问用户，不编路径。
 - `support_level/board_knowledge/` 不是泛知识库，而是板级操作支撑层。
 - `board-exec` 里应维护板级状态机，不允许把“上一次看见什么”直接当成当前状态。
 - 这里只有两类东西值得长期沉淀：静态资料索引入口；以及已经实测证明可复用的板级操作结论。
@@ -196,3 +172,26 @@
 
 当前没有单独的“主机操作 skill”。
 本机 shell、路径核对、文件查看、`rg`/`find`/`ls` 这类普通操作，直接作为默认能力使用即可。
+
+## 远端仓库
+
+当前轻量 Git 远端仓库是：
+
+- `https://github.com/lbwlele-bot/nxp_ivesliu_skill.git`
+
+它管理的是当前 `NXP_v2` 工作区的轻量视图，主要包括：
+
+- 入口手册
+- 本地 skill
+- 支撑层说明文档
+- 板级知识 README
+- 各源码模块 `USAGE.md`
+
+它不承载本地重资源本体，例如：
+
+- `Image`
+- `toolchain`
+- `firmware` 二进制
+- SDK 压缩包
+- 源码树本体
+- `work` case 产物

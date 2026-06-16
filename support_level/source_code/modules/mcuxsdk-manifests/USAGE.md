@@ -18,26 +18,26 @@
 
 - 选择 manifest
 - 派生 workspace
-- 让 source-editable SDK lane 和固定 archive SDK lane 分清
+- 让“源码可编辑的 SDK 路线”和“固定压缩包 SDK 路线”分清
 
 它不等于：
 
-- 某个 board-specific payload owner
-- 某个 live runtime owner
+- 某个板子的 payload 构建入口
+- 某个当前运行态的判断入口
 
-## 已吸收：host bootstrap 认知
+## 已吸收：主机环境准备 认知
 
-像下面这些 lane，第一轮会经过 manifest / workspace 语义：
+像下面这些链路，第一轮会经过 manifest / workspace 这一层：
 
-- `MCUX SDK` source-editable lane
-- west / workspace bootstrap lane
-- 一些 Zephyr / latest SDK 相关 lane
+- `MCUX SDK` 源码可编辑路线
+- west / workspace 初始化路线
+- 一些 Zephyr / 最新 SDK 相关路线
 
 共同边界：
 
-- shared workspace / latest workspace
-  和 case-local mutable workspace 要分开
-- 不要在共享基线里直接 build / patch
+- 共享 workspace / 最新 workspace
+  和 case 本地可修改 workspace 要分开
+- 不要在共享基线里直接构建或打 patch
 
 ## 待补全
 

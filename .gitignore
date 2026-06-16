@@ -20,18 +20,18 @@ workspace/.agents/*
 workspace/.agents/skills/*
 !workspace/.agents/skills/board-exec/
 !workspace/.agents/skills/compile/
-!workspace/.agents/skills/support-level/
+!workspace/.agents/skills/support/
 !workspace/.agents/skills/understanding/
 workspace/.agents/skills/board-exec/*
 workspace/.agents/skills/compile/*
-workspace/.agents/skills/support-level/*
+workspace/.agents/skills/support/*
 workspace/.agents/skills/understanding/*
 !workspace/.agents/skills/board-exec/SKILL.md
 !workspace/.agents/skills/compile/SKILL.md
-!workspace/.agents/skills/support-level/SKILL.md
+!workspace/.agents/skills/support/SKILL.md
 !workspace/.agents/skills/understanding/SKILL.md
 
-# Keep support-level entry docs only.
+# Keep support entry docs only.
 support_level/*
 !support_level/README.md
 !support_level/board_knowledge/

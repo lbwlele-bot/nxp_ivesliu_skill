@@ -15,7 +15,7 @@
   现在是启动总手册
 - `understanding`
   作为理解层保留
-- `support-level`
+- `support`
   作为资源/资料/源码/板级支撑层入口
 - `compile`
   作为编译阶段框架
@@ -109,19 +109,19 @@
 
 - `imx9-board-workflow`
   当前状态：已完成第一轮吸收
-  第一轮吸收目标：把 family intake / evidence priority / board-state-first / asset-work root / router 边界拆进 `AGENTS.md`、`support-level`、`compile`、`board-exec`
+  第一轮吸收目标：把 family intake / evidence priority / board-state-first / asset-work root / router 边界拆进 `AGENTS.md`、`support`、`compile`、`board-exec`
 - `imx9-network-share`
   当前状态：已完成第一轮吸收
-  第一轮吸收目标：把 Linux-up 之后的 shared networking 分层顺序和边界拆进 `support-level`
+  第一轮吸收目标：把 Linux-up 之后的 shared networking 分层顺序和边界拆进 `support`
 - `imx9-rm-evidence`
   当前状态：已完成第一轮吸收
-  第一轮吸收目标：把 `RM` 作为 bounded secondary-evidence lane 的入口边界拆进 `support-level`
+  第一轮吸收目标：把 `RM` 作为 bounded secondary-evidence lane 的入口边界拆进 `support`
 - `imx9-zephyr-host-bootstrap`
   当前状态：已完成第一轮吸收
-  第一轮吸收目标：把 Zephyr host bootstrap 的 owner 边界拆进 `compile` / `support-level`
+  第一轮吸收目标：把 Zephyr host bootstrap 的 owner 边界拆进 `compile` / `support`
 - `self-improving-agent`
   当前状态：已完成第一轮吸收
-  第一轮吸收目标：把 failure notebook first 的规则拆进 `support-level` 和总手册
+  第一轮吸收目标：把 failure notebook first 的规则拆进 `support` 和总手册
 
 ### i.MX93
 
@@ -219,7 +219,7 @@
 4. 再把旧 skill 里的可复用部分吸收到：
    `compile`
    `board-exec`
-   `support-level`
+   `support`
    `understanding`
    或新的更窄 skill
 

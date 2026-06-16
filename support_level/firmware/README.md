@@ -70,13 +70,13 @@ vendor package 解包目录本身可能包含多颗 SoC 的 payload。
 - 真正 output-affecting 的，是：
   具体文件名
   具体 revision
-  以及当前 lane 要求的 SoC / rev 身份
+  以及当前链路要求的 SoC / rev 身份
 
-对 `i.MX95` 这类 lane，尤其要防止：
+对 `i.MX95` 这类链路，尤其要防止：
 
 - 把 `A0` / `B0` 混看
 - 只看目录名字，不看实际文件名字
-- 把错误 revision 的 blob 误判成 transport 问题
+- 把错误 revision 的 blob 误判成 传输 问题
 
 ## 当前推荐读取方式
 
@@ -100,5 +100,5 @@ vendor package 解包目录本身可能包含多颗 SoC 的 payload。
 
 - 不要把 `firmware/` 和 `source_code/` 混读
 - 不要在这里生成临时 build 输出
-- 不要让 case recipe 直接写死一个旧共享根路径而跳过这里
+- 不要让 case 操作手册直接写死一个旧共享根路径而跳过这里
 - 不要在 revision 不清楚时继续往下烧写或打包

@@ -3,7 +3,7 @@
 - 真实源码目录：`./uboot-imx/`
 - 当前参考分支：`lf_v2025.04`
 - 当前参考版本：`lf-6.18.2-1.0.0`
-- 主要链路：`boot-firmware`
+- 主要链路：`启动固件`
 
 ## 使用规则
 
@@ -18,14 +18,14 @@
 
 对 `i.MX943`：
 
-- generic Linux 常走 board-generic `flash_a55`
+- 通用 Linux 常走 板级通用 `flash_a55`
 - `RTE` 可能走 `flash_a55`，也可能在验证过的 `3.4` 路径里走 `flash_all`
-- 这条链里既要注意通用 `uboot-imx`，也要注意某些 `RTE` lane 可能改用 `real-time-edge-uboot`
+- 这条链里既要注意通用 `uboot-imx`，也要注意某些 `RTE` 链路 可能改用 `real-time-edge-uboot`
 
 当前版本观察：
 
 - 本地这份 `uboot-imx` 是 `lf-6.18.2-1.0.0`
-- 但旧 `RTE 3.4` lane 的 `U-Boot` 参考更接近 `real-time-edge-uboot`
+- 但旧 `RTE 3.4` 链路 的 `U-Boot` 参考更接近 `real-time-edge-uboot`
 - 所以 `i.MX943 flashbin` 任务里，不能不分栈地直接默认只看这一份 `uboot-imx`
 
 ## 待补全

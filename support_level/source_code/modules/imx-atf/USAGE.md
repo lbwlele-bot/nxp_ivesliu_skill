@@ -3,7 +3,7 @@
 - 真实源码目录：`./imx-atf/`
 - 当前参考分支：`lf_v2.12`
 - 当前参考版本：`lf-6.18.2-1.0.0`
-- 主要链路：`boot-firmware`
+- 主要链路：`启动固件`
 
 ## 使用规则
 
@@ -18,7 +18,7 @@
 
 对 `i.MX943`：
 
-- generic Linux 路径通常不要求 `SPD=opteed`
+- 通用 Linux 路径通常不要求 `SPD=opteed`
 - `RTE` 路径要求 `SPD=opteed`
 - 最终提供给 `imx-mkimage` 的关键产物是 `bl31.bin`
 
@@ -31,19 +31,19 @@
 
 对 `i.MX95 RTE 3.3 flash.bin`：
 
-- `ATF` 不再只是共享 boot-firmware 输入
-- 它还承担明确的 secure-world delta
+- `ATF` 不再只是共享 启动固件 输入
+- 它还承担明确的安全世界差异项
 
 关键点：
 
 - 必须用 `SPD=opteed`
-- 需要同步 `meta-real-time-edge` 的 `ATF` patch bucket
+- 需要同步 `meta-real-time-edge` 的 `ATF` patch 分桶
 - 最终仍然向 `imx-mkimage` 提供 `bl31.bin`
 
 高风险误区：
 
-- 不要把整个 `meta-real-time-edge` patch set 全灌进 `ATF`
-- 这里只该吃 `ATF` 自己的 patch bucket
+- 不要把整个 `meta-real-time-edge` patch 集全灌进 `ATF`
+- 这里只该吃 `ATF` 自己的 patch 分桶
 
 ## 待补全
 

@@ -2,9 +2,9 @@
 
 这里放 `NXP_v2` 的重资源。
 
-当前结构优先服务于 `NXP_v2` 的长期支撑层资产，不再直接照搬旧根目录名。
+当前结构优先服务于 `NXP_v2` 的长期支撑层资产。
 
-建议目录：
+当前目录：
 
 - `Image/`
 - `SoC_material/`
@@ -17,7 +17,7 @@
 - `firmware/`
 - `work/`
 
-约定：
+说明：
 
 - `source_code/` 放共享源码基线
 - `m_freertos_sdk/` 放 `MCUX SDK / FreeRTOS SDK` 发布压缩包资产，不当成普通 Git 源码树
@@ -25,34 +25,32 @@
 - `board_knowledge/` 放板级操作时已经被实测证明、后续可复用的知识
 - `tools/` 放主机侧工具，长期形态是 `工具目录 + USAGE.md + 程序本体`
 - `work/` 放 case 日志、产物和临时修改
-- `toolchain/`、`firmware/`、`m_freertos_sdk/` 应逐步补 `README.md` 作为按需读取入口
+- `toolchain/`、`firmware/`、`m_freertos_sdk/` 可在各自目录下补最小 README 作为入口
 
-当前已完成的长期资产迁移：
+这里的文档主要负责：
 
-- `tools/`
-- `source_code/`
-- `m_freertos_sdk/`
-- `toolchain/`
-- `Image/`
-- `firmware/`
-- `SoC_material/i.MX93/RM`
-- `SoC_material/i.MX943/RM`
-- `SoC_material/i.MX95/RM`
+- 这层里有什么
+- 它们放在什么位置
+- 该进哪一层 README 或 `USAGE.md`
 
-当前已补进的新 RM：
+文档分工：
 
-- `SoC_material/i.MX91/RM/IMX91RM.pdf`
-- `SoC_material/i.MX8M/RM/IMX8MDQLQRM.pdf`
-- `SoC_material/i.MX8MM/RM/PREVIEW_IMX8MMRM.pdf`
-- `SoC_material/i.MX8MN/RM/IMX8MNRM.pdf`
-- `SoC_material/i.MX8MP/RM/PREVIEW_IMX8MPRM.pdf`
-- `SoC_material/i.MX8ULP/RM/IMX8ULPRM.pdf`
+- 每一层目录下的 `README.md` 负责说明这一层里有什么、怎么分布、该往哪一层继续走
+- 每个源码模块或具体工具旁边的 `USAGE.md` 负责操作手册
 
-当前仍待补齐：
+如果已经明确要动某个源码模块，再去模块目录旁边读取 `USAGE.md`。
 
-- `linux_document/` 下的正式 Linux BSP docs 包
-- `SoC_material/` 里 RM 之外的硬件资料、原理图、板型资料
-- 当前还没直接补进来的 RM：
-  `i.MX8DXL`
-  `i.MX8QXP`
-  `i.MX8QM`
+当前已收成长期模块入口的源码，简要包括：
+
+- `imx-atf`
+- `imx-mkimage`
+- `imx-oei`
+- `imx-optee-os`
+- `imx-sm`
+- `linux-imx`
+- `mcuxsdk-core`
+- `mcuxsdk-manifests`
+- `meta-real-time-edge`
+- `real-time-edge-linux`
+- `real-time-edge-uboot`
+- `uboot-imx`

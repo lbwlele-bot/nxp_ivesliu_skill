@@ -3,7 +3,7 @@
 - 真实源码目录：`./real-time-edge-uboot/`
 - 当前参考分支：`baremetal-uboot_v2020.04`
 - 当前参考版本：`Real-Time-Edge-v2.0-baremetal-202107`
-- 主要链路：`boot-firmware`
+- 主要链路：`启动固件`
 
 ## 使用规则
 
@@ -14,12 +14,12 @@
 
 ## 已吸收：`imx943-flashbin` 输入角色
 
-在旧 `imx943-flashbin` 里，`real-time-edge-uboot` 不是所有 lane 都要读，
+在旧 `imx943-flashbin` 里，`real-time-edge-uboot` 不是所有链路都要读，
 但在 `RTE` 路径里需要作为重要候选输入来判断，而不是默认只看 `uboot-imx`。
 
 对 `i.MX943`：
 
-- generic Linux 更偏向 board-generic `uboot-imx`
+- 通用 Linux 更偏向 板级通用 `uboot-imx`
 - `RTE 3.3` / `RTE 3.4` 需要额外判断是否应转到 `Real-Time Edge` 的 `U-Boot` 线
 
 当前版本观察：
@@ -36,14 +36,14 @@
 
 对 `i.MX95 RTE 3.3 flash.bin`：
 
-- `U-Boot` owner 明确落在 `real-time-edge-uboot`
+- `U-Boot` 明确落在 `real-time-edge-uboot`
 - 而不是通用 `uboot-imx`
 
 关键点：
 
 - 已验证旧 skill 使用的是 `Real-Time-Edge-v3.3-uboot-202512` 这一条线
-- 它属于 case delta，不应和 generic Linux 的 `uboot-imx` 混看
-- 对这条 lane，A-core side 的 toolchain family 也要明确落在
+- 它属于 case 特有差异，不应和 通用 Linux 的 `uboot-imx` 混看
+- 对这条链路，A-core 侧的工具链家族也要明确落在
   Linux-targeted `aarch64-none-linux-gnu`
 
 当前版本缺口：
@@ -53,11 +53,11 @@
 
 所以当前能沉淀的是：
 
-- owner 归属
-- lane 选择规则
-- A-core toolchain owner 归属
+- `U-Boot` 归属
+- 链路选择规则
+- A-core 工具链归属
 
-还不能把当前目录直接当成那条 validated lane 的现成源码基线
+还不能把当前目录直接当成那条已验证链路的现成源码基线
 
 ## 待补全
 
