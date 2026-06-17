@@ -33,13 +33,28 @@
 
 1. [workspace/AGENTS.md](/home/ives/桌面/NXP_v2/workspace/AGENTS.md)
 2. [workspace/ARCHITECTURE.md](/home/ives/桌面/NXP_v2/workspace/ARCHITECTURE.md)
-3. [support_level/README.md](/home/ives/桌面/NXP_v2/support_level/README.md)
+3. [workspace/CONSTRUCTION.md](/home/ives/桌面/NXP_v2/workspace/CONSTRUCTION.md)
+4. [support_level/README.md](/home/ives/桌面/NXP_v2/support_level/README.md)
 
 如果你已经在处理具体任务：
 
 1. 先看 [workspace/AGENTS.md](/home/ives/桌面/NXP_v2/workspace/AGENTS.md)
 2. 按当前 unresolved step 进入对应 skill
 3. 再下沉到 `support_level` 对应 README 或 `USAGE.md`
+
+## 核心文档怎么分工
+
+这三个文档不要混着看，它们分别回答不同问题：
+
+- [workspace/AGENTS.md](/home/ives/桌面/NXP_v2/workspace/AGENTS.md)
+  回答“拿到任务后，当前系统应该怎么开工、怎么推进、case 放哪、高价值信息放哪”。
+- [workspace/ARCHITECTURE.md](/home/ives/桌面/NXP_v2/workspace/ARCHITECTURE.md)
+  回答“当前这套系统为什么这样分层、各层 owner 是谁、资源面和控制面怎么拆、Git 边界是什么”。
+- [workspace/CONSTRUCTION.md](/home/ives/桌面/NXP_v2/workspace/CONSTRUCTION.md)
+  回答“如果只有 GitHub 仓库，没有现成历史系统和资产，应该怎样从零搭起一套类似体系”。
+
+如果只是使用当前系统，优先读 `AGENTS` 和 `ARCHITECTURE`。
+如果是想在另一台机器、另一个团队或另一个领域复刻这种体系，再读 `CONSTRUCTION`。
 
 ## 顶层结构
 
@@ -63,6 +78,8 @@
   总入口规则
 - [ARCHITECTURE.md](/home/ives/桌面/NXP_v2/workspace/ARCHITECTURE.md)
   当前系统架构说明
+- [CONSTRUCTION.md](/home/ives/桌面/NXP_v2/workspace/CONSTRUCTION.md)
+  从零搭建这套系统的施工手册
 - `.agents/skills/understanding/SKILL.md`
   高阶理解层
 - `.agents/skills/support/SKILL.md`
@@ -278,7 +295,8 @@
 1. [README.md](/home/ives/桌面/NXP_v2/README.md)
 2. [workspace/AGENTS.md](/home/ives/桌面/NXP_v2/workspace/AGENTS.md)
 3. [workspace/ARCHITECTURE.md](/home/ives/桌面/NXP_v2/workspace/ARCHITECTURE.md)
-4. [support_level/README.md](/home/ives/桌面/NXP_v2/support_level/README.md)
+4. [workspace/CONSTRUCTION.md](/home/ives/桌面/NXP_v2/workspace/CONSTRUCTION.md)
+5. [support_level/README.md](/home/ives/桌面/NXP_v2/support_level/README.md)
 
 如果你要开始做事：
 
