@@ -7,14 +7,13 @@
 
 # Allow selected top-level lightweight docs.
 !README.md
-!SKILL_MIGRATION_STATUS.md
 !workspace/
 !support_level/
 
 # Keep workspace docs and local skills.
 workspace/*
 !workspace/AGENTS.md
-!workspace/skill-architecture-draft.md
+!workspace/ARCHITECTURE.md
 !workspace/.agents/
 workspace/.agents/*
 !workspace/.agents/skills/
