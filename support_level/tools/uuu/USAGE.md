@@ -46,6 +46,13 @@
 - `-b fat_write` 常用于 `Image` / `dtb` / `.ko` 这类 FAT 运行时文件
 - 不要把 `imx-mkimage` 产出的启动镜像误当成 `fat_write` 文件
 
+## 当前阶段相关的硬规则
+
+- first-stage `uuu -b sd <flash.bin>` 的前提，是当前证据能够证明板子仍在下载态，而不是只凭“刚 reset 过”
+- 复用当前 `FB` 会话做 second-stage 写入前，先证明第一阶段已经把板子拉进 `U-Boot fastboot / FB`
+- second-stage 写入成立，只能先说明当前 `FB` 中继动作成立，不自动证明最终启动链或运行态已经成立
+- 如果当前只是想证明板子还在下载态，优先先看 `uuu -lsusb` 这类强信号，不要让串口静音反过来替 USB 阶段做判断
+
 ## 当前注意事项
 
 - 同样是 `uuu -b sd`，从 `SDPS` 开始和复用当前 `FB` 会话，不是同一种验证
@@ -57,3 +64,4 @@
 - `../../board_knowledge/imx943evk19a0/README.md`
 - `../../board_knowledge/imx8dxlevk/README.md`
 - `../../board_knowledge/imx93evk14/README.md`
+- `../../board_knowledge/imx95evk19/README.md`
