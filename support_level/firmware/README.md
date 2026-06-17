@@ -9,7 +9,7 @@
 - DDR firmware
 - ELE / AHAB container
 - vendor firmware package 解包结果
-- 其它不应和 `source_code/` 混在一起的固定输入
+- 其它不应和 `code_assets/projects/` / `code_assets/workspaces/` 混在一起的固定输入
 
 ## 使用规则
 
@@ -82,7 +82,7 @@ vendor package 解包目录本身可能包含多颗 SoC 的 payload。
 
 如果任务是 `flash.bin` build：
 
-1. 先读相关源码模块 `USAGE.md`
+1. 先读相关源码项目 `USAGE.md`
 2. 再来这里确认固定输入根目录
 3. 明确记录：
    - 当前要用哪个 package
@@ -98,7 +98,7 @@ vendor package 解包目录本身可能包含多颗 SoC 的 payload。
 
 ## 当前不该怎么用
 
-- 不要把 `firmware/` 和 `source_code/` 混读
+- 不要把 `firmware/` 和 `code_assets/projects/` / `code_assets/workspaces/` 混读
 - 不要在这里生成临时 build 输出
 - 不要让 case 操作手册直接写死一个旧共享根路径而跳过这里
 - 不要在 revision 不清楚时继续往下烧写或打包

@@ -93,7 +93,7 @@ make SOC=iMX94 OEI=YES LPDDR_TYPE=<lpddr4|lpddr5> flash_all
 后续要继续对齐：
 
 - 这份 `imx-mkimage` 是否要补出 `lf-6.18.2` 基线
-- 还是从 `_to_absorb/` 里的旧资产拆出对应版本并转正
+- 还是从现有已复制资产里拆出对应版本并转正
 
 ## 已吸收：旧 `imx95-rte33-build-flashbin` 第一轮信息
 
@@ -162,7 +162,7 @@ make SOC=iMX95 REV=B0 OEI=YES LPDDR_TYPE=lpddr5 flash_all
 
 ### 与支撑层资产的关系
 
-这条链路继续落地时，除了看源码模块，
+这条链路继续落地时，除了看源码项目，
 还要回头读：
 
 - `../../toolchain/README.md`

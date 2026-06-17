@@ -9,9 +9,10 @@
 - `Image/`
 - `SoC_material/`
 - `board_knowledge/`
+- `code_assets/`
+- `compile_targets/`
 - `tools/`
 - `linux_document/`
-- `source_code/`
 - `m_freertos_sdk/`
 - `toolchain/`
 - `firmware/`
@@ -19,7 +20,8 @@
 
 说明：
 
-- `source_code/` 放共享源码基线
+- `code_assets/` 放长期保留的代码资产，下面再分 `projects/` 和 `workspaces/`
+- `compile_targets/` 放编译对象入口，由 `compile` owner
 - `m_freertos_sdk/` 放 `MCUX SDK / FreeRTOS SDK` 发布压缩包资产，不当成普通 Git 源码树
 - `firmware/` 放 DDR firmware、AHAB 等固定二进制输入
 - `board_knowledge/` 放板级操作时已经被实测证明、后续可复用的知识
@@ -36,11 +38,11 @@
 文档分工：
 
 - 每一层目录下的 `README.md` 负责说明这一层里有什么、怎么分布、该往哪一层继续走
-- 每个源码模块或具体工具旁边的 `USAGE.md` 负责操作手册
+- 每个源码项目或具体工具旁边的 `USAGE.md` 负责操作手册
 
-如果已经明确要动某个源码模块，再去模块目录旁边读取 `USAGE.md`。
+如果已经明确要看某个源码项目，再去项目目录旁边读取 `USAGE.md`。
 
-当前已收成长期模块入口的源码，简要包括：
+当前已收成长期源码项目的资产，简要包括：
 
 - `imx-atf`
 - `imx-mkimage`
@@ -54,3 +56,4 @@
 - `real-time-edge-linux`
 - `real-time-edge-uboot`
 - `uboot-imx`
+- `android`

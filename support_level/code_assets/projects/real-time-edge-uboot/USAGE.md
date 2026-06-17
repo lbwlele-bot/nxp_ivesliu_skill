@@ -30,7 +30,7 @@
 这说明：
 
 - 当前这份 `real-time-edge-uboot` 还不能直接充当 `i.MX943 RTE 3.4 flashbin` 的现成长期基线
-- 后续还要继续从 `_to_absorb/` 或其他已复制资产里拆出更合适的版本
+- 后续还要继续从其他已复制资产里拆出更合适的版本
 
 ## 已吸收：`imx95-rte33-build-flashbin` 输入角色
 

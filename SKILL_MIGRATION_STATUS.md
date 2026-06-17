@@ -26,14 +26,16 @@
 
 ## 本轮源码整理已完成
 
-`support_level/source_code/` 已经先收成两层：
+当前源码与编译层已经先收成三类：
 
-- `modules/`
-  清晰的单模块源码基线
-- `_to_absorb/`
-  从旧系统复制来的混合资产，暂不当成长期结构
+- `support_level/code_assets/projects/`
+  标准源码资产
+- `support_level/code_assets/workspaces/`
+  工作区输入资产
+- `support_level/compile_targets/`
+  编译对象入口
 
-当前已经落到 `modules/` 的源码：
+当前已经落到 `code_assets/projects/` 的源码项目：
 
 - `imx-atf`
 - `imx-mkimage`
@@ -47,23 +49,31 @@
 - `real-time-edge-linux`
 - `real-time-edge-uboot`
 - `uboot-imx`
-
-当前被挪到 `_to_absorb/`、等待后续按旧 skill 拆分或删除的资产：
-
 - `android`
-- `real-time-edge-3.4`
-- `rte33-mcuxsdk`
-- `rte33-standalone-src`
-- `rte33-zsdk`
+
+当前保留的工作区资产：
+
+- `code_assets/workspaces/rte-hmc-latest`
+- `code_assets/workspaces/rte33-zsdk`
+
+当前已收编译对象：
+
+- `flashbin`
+- `linux`
+- `m_freertos_sdk`
+- `zephyr`
+- `a55_rtos`
 
 原则：
 
-- 以后不再把“整套版本快照目录”当成 `source_code` 的长期组织方式
+- 以后不再保留“统一源码总壳”这一层
 - 长期方式是：
-  `一个源码模块一个目录`
+  `一个源码项目一个目录`
+- 多模块集成源码保留在 `code_assets/workspaces/`
+- 编译入口单独保留在 `compile_targets/`
 - 目录形态是：
-  `source_code/modules/<module>/USAGE.md`
-  `source_code/modules/<module>/<real-source-tree>/`
+  `code_assets/projects/<project>/USAGE.md`
+  `code_assets/projects/<project>/<real-source-tree>/`
 
 ## 本轮迁移主线
 
@@ -80,7 +90,7 @@
 第一轮完成的事：
 
 - 先把这几条旧 skill 里关于 `flash.bin`、`uuu`、`Fastboot relay`、`M` 核启动 owner 的共同抽象收出来
-- 并把每块板、每个版本后续要收敛的 recipe 入口回填到源码模块 `USAGE.md`
+- 并把每块板、每个版本后续要收敛的 recipe 入口回填到源码项目 `USAGE.md`
 
 ## 旧 Skill 台账
 
@@ -175,7 +185,7 @@
   当前已落点：`board_knowledge/imx943evk19a0/` + `workspace/.agents/skills/board-exec/`
 - `imx943-flashbin`
   当前状态：已完成第一轮吸收
-  第一轮吸收目标：先把旧 skill 的 `flashbin` 依赖、命令形态、产物边界和版本缺口写进相关源码模块 `USAGE.md`
+  第一轮吸收目标：先把旧 skill 的 `flashbin` 依赖、命令形态、产物边界和版本缺口写进相关源码项目 `USAGE.md`
 - `imx943-linux`
   当前状态：已完成第一轮吸收
   第一轮吸收目标：把 kernel-side artifact owner 边界拆进 `compile` / `linux-imx` / `real-time-edge-linux`
@@ -197,7 +207,7 @@
 - `imx95-rte33-build-flashbin`
   当前状态：已完成第一轮吸收
   第一轮吸收目标：把 `RTE secure-world delta`、`toolchain owner split`、`OEI revision identity`、`flash_all` 明确 owner 这些关键卡点写进相关模块 `USAGE.md` 和支撑层边界
-  当前已落点：`source_code/modules/imx-mkimage/`、`real-time-edge-uboot/`、`imx-atf/`、`imx-optee-os/`、`imx-oei/`、`imx-sm/`、`workspace/.agents/skills/compile/`、`support_level/toolchain/README.md`、`support_level/firmware/README.md`
+  当前已落点：`code_assets/projects/imx-mkimage/`、`code_assets/projects/real-time-edge-uboot/`、`code_assets/projects/imx-atf/`、`code_assets/projects/imx-optee-os/`、`code_assets/projects/imx-oei/`、`code_assets/projects/imx-sm/`、`compile_targets/flashbin/`、`workspace/.agents/skills/compile/`、`support_level/toolchain/README.md`、`support_level/firmware/README.md`
 
 ### 窄辅助 build skill
 
@@ -213,10 +223,11 @@
 从现在开始，不再先按“skill 名字”直接塞到新系统里。
 而是按下面这个顺序拆：
 
-1. 先看旧 skill 真正依赖哪些源码模块
-2. 把源码模块落到 `source_code/modules/<module>/`
-3. 在该模块旁边补 `USAGE.md`
-4. 再把旧 skill 里的可复用部分吸收到：
+1. 先看旧 skill 真正依赖哪些源码项目
+2. 把源码项目落到 `code_assets/projects/<project>/`
+3. 在该项目旁边补 `USAGE.md`
+4. 把“我要编什么”的入口拆到 `compile_targets/<target>/`
+5. 再把旧 skill 里的可复用部分吸收到：
    `compile`
    `board-exec`
    `support`
@@ -265,7 +276,7 @@
 - `i.MX9` family router / network share / `RM` evidence / Zephyr bootstrap / failure reuse
 - `Real-Time Edge Linux` / heterogeneous-multicore 窄 build helper
 
-这条主线最容易先把下面这些源码模块写实：
+这条主线最容易先把下面这些源码项目写实：
 
 - `imx-atf`
 - `imx-mkimage`

@@ -2,7 +2,7 @@
 
 这里放的是 `NXP MCUX SDK / FreeRTOS SDK` 发布压缩包资产。
 
-它和 `source_code/` 不一样：
+它和 `code_assets/projects/` / `code_assets/workspaces/` 不一样：
 
 - 这里默认是厂商发布包
 - 不是普通 Git clone 基线
@@ -31,7 +31,7 @@
 
 这里虽然主要放的是 SDK 发布压缩包资产，
 但和 SDK 编译直接相关、又不该写进某块板 `board_knowledge` 的规则，
-也可以先在这里收编译边界，再由具体源码模块手册继续细化。
+也可以先在这里收编译边界，再由具体源码项目手册继续细化。
 
 ### `i.MX8DXL` `M4` 构建边界
 
