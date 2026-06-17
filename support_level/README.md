@@ -16,6 +16,7 @@
 - `m_freertos_sdk/`
 - `toolchain/`
 - `firmware/`
+- `to_absorb/`
 - `work/`
 
 说明：
@@ -26,7 +27,8 @@
 - `firmware/` 放 DDR firmware、AHAB 等固定二进制输入
 - `board_knowledge/` 放板级操作时已经被实测证明、后续可复用的知识
 - `tools/` 放主机侧工具，长期形态是 `工具目录 + USAGE.md + 程序本体`
-- `work/` 放 case 日志、产物和临时修改
+- `to_absorb/` 放待归纳的高价值信息，保留来源 case，后续再决定吸收到哪一层
+- `work/` 放 case 全过程记录、日志、产物和临时修改
 - `toolchain/`、`firmware/`、`m_freertos_sdk/` 可在各自目录下补最小 README 作为入口
 
 这里的文档主要负责：
@@ -51,7 +53,7 @@
 - `imx-sm`
 - `linux-imx`
 - `mcuxsdk-core`
-- `mcuxsdk-manifests`
+- `imx-scfw-porting-kit`
 - `meta-real-time-edge`
 - `real-time-edge-linux`
 - `real-time-edge-uboot`

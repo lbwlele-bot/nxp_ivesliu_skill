@@ -44,7 +44,6 @@
 - `imx-sm`
 - `linux-imx`
 - `mcuxsdk-core`
-- `mcuxsdk-manifests`
 - `meta-real-time-edge`
 - `real-time-edge-linux`
 - `real-time-edge-uboot`
@@ -53,8 +52,8 @@
 
 当前保留的工作区资产：
 
-- `code_assets/workspaces/rte-hmc-latest`
-- `code_assets/workspaces/rte33-zsdk`
+- `code_assets/workspaces/hmc-workspace`
+- `code_assets/workspaces/zephyr-workspace`
 
 当前已收编译对象：
 

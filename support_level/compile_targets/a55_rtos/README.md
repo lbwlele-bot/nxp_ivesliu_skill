@@ -7,12 +7,12 @@
 
 当前主对象：
 
-- `../../code_assets/workspaces/rte-hmc-latest/heterogeneous-multicore/`
+- `../../code_assets/workspaces/hmc-workspace/heterogeneous-multicore/`
 
 当前联动输入：
 
-- `../../code_assets/workspaces/rte-hmc-latest/zsdk/`
-- `../../code_assets/workspaces/rte-hmc-latest/mcuxsdk/`
+- `../../code_assets/workspaces/hmc-workspace/zsdk/`
+- `../../code_assets/workspaces/hmc-workspace/mcuxsdk/`
 - `../../toolchain/`
 
 必须写死的规则：
@@ -26,7 +26,7 @@
 正常进入方式：
 
 - 先由 `compile` 判断任务是否真的是 `A55 RTOS / HMC` 对象
-- 如果是，再进入 `../../code_assets/workspaces/rte-hmc-latest/README.md`
+- 如果是，再进入 `../../code_assets/workspaces/hmc-workspace/README.md`
 - 再由该工作区和 `heterogeneous-multicore` 本体决定具体构建动作
 
 什么时候不该留在这里：

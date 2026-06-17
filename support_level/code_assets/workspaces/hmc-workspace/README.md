@@ -1,4 +1,4 @@
-# rte-hmc-latest
+# hmc-workspace
 
 这是从旧 `NXP` 工作区补过来的 `RTE HMC` 集成工作区。
 
@@ -13,6 +13,21 @@
 当前本地这份 `heterogeneous-multicore` 的参考版本是：
 
 - `Real-Time-Edge-v3.4-202604`
+
+当前共享区的三个主仓：
+
+- `heterogeneous-multicore`
+- `mcuxsdk`
+- `zephyr`
+
+应尽量保持在同一条版本线；当前已统一到本地分支：
+
+- `rte-v3.4-202604`
+
+补充说明：
+
+- `mcuxsdk` 当前本地同时挂有 `Real-Time-Edge-v3.3-202512` 和 `Real-Time-Edge-v3.4-202604` 两个 tag，且它们指向同一个提交
+- 所以下次看版本时，不要只靠 `git describe`，要结合 `git show --decorate --no-patch HEAD` 一起确认
 
 使用规则：
 

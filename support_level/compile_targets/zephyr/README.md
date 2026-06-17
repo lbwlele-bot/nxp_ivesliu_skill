@@ -9,24 +9,24 @@
 
 当前本地默认 Zephyr 编译入口：
 
-- `../../code_assets/workspaces/rte33-zsdk/`
+- `../../code_assets/workspaces/zephyr-workspace/`
 
 常见依赖：
 
-- `../../code_assets/workspaces/rte33-zsdk/`
+- `../../code_assets/workspaces/zephyr-workspace/`
 - `../../toolchain/zephyr-sdk-1.0.1/`
 - 必要时再回看 `../../board_knowledge/`
 
 当前输入边界：
 
-- `../../code_assets/workspaces/rte-hmc-latest/zsdk/` 里虽然也带有 `zephyr/`
+- `../../code_assets/workspaces/hmc-workspace/zsdk/` 里虽然也带有 `zephyr/`
 - 但它属于 `a55_rtos / heterogeneous-multicore` 工作区的联动输入
 - 不应默认把它当成当前 Zephyr 编译入口
 
 正常进入方式：
 
 - 先由 `compile` 判断任务是不是纯 Zephyr 对象
-- 如果是，就优先进入 `../../code_assets/workspaces/rte33-zsdk/README.md`
+- 如果是，就优先进入 `../../code_assets/workspaces/zephyr-workspace/README.md`
 - 再根据具体任务决定是否继续进入 `zephyr/` 工作区
 
 不要这样用：

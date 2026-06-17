@@ -5,12 +5,15 @@
 - 当前参考版本：`4cc1d817`
 - 主要链路：`mcore-rtos`
 
+这是 `MCUX SDK` 代码参考基线，不是 workspace 初始化入口，也不是默认、完全可信的 release 编译来源。
+对 `M` 核 SDK 编译，首选始终是用户提供的 `m_freertos_sdk` 发布包；这里只有在缺少发布包上下文、需要查源码实现、对比组件或做备选分析时才回来看。
+
 ## 使用规则
 
 1. 先确认任务是不是落到 `MCUX SDK` 基础代码
 2. 先核对当前 ref
 3. 只读检查可直接在这里做
-4. 要改、要编、要集成，复制到 `../../work/<case>/` 再做
+4. 不要把这里当默认 release 编译入口；要改、要编、要集成，先确认为什么不能用 `m_freertos_sdk` 发布包，再复制到 `../../work/<case>/` 里处理
 
 ## 已吸收：`imx943-mcore-rtos` 基线应用角色
 
@@ -41,8 +44,8 @@
 
 - `mcuxsdk-core`
   更偏向 source / SDK core
-- workspace 派生与 manifest 选择
-  再看 `mcuxsdk-manifests`
+- workspace / 代码树派生
+  只在明确需要源码路线时再单独判断
 
 ## 已吸收：`i.MX8DXL M4` 构建边界
 

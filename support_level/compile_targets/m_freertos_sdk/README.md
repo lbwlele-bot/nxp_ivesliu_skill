@@ -11,7 +11,6 @@
 - `../../toolchain/`
 - 必要时再回看：
   `../../code_assets/projects/mcuxsdk-core/`
-  `../../code_assets/projects/mcuxsdk-manifests/`
 
 正常进入方式：
 

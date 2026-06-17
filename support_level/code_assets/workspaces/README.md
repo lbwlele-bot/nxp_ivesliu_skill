@@ -9,10 +9,10 @@
 
 当前已保留的工作区包括：
 
-- `rte33-zsdk`
-  `RTE 3.3` 相关的 Zephyr 工作区
-- `rte-hmc-latest`
-  `RTE 3.4` 相关的 heterogeneous-multicore / zsdk / mcuxsdk 联动工作区
+- `zephyr-workspace`
+  当前本地默认的 Zephyr 工作区入口
+- `hmc-workspace`
+  `heterogeneous-multicore / zsdk / mcuxsdk` 的集成工作区入口
 
 使用规则：
 

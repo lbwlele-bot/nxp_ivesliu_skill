@@ -1,4 +1,5 @@
-# Default: ignore everything in this heavy workspace.
+# Default: ignore downloaded/heavy workspace contents.
+# Keep our own lightweight docs, rules, and knowledge-entry files explicitly.
 *
 
 # Allow git metadata and this ignore file itself.
@@ -31,7 +32,9 @@ workspace/.agents/skills/understanding/*
 !workspace/.agents/skills/support/SKILL.md
 !workspace/.agents/skills/understanding/SKILL.md
 
-# Keep support entry docs only.
+# Under support_level, default to ignoring external downloads and heavy assets:
+# image packages, SoC资料, SDK/toolchain payloads, cloned source trees, and tool binaries.
+# Re-allow only our own entry docs and curated knowledge/routing files.
 support_level/*
 !support_level/README.md
 !support_level/board_knowledge/
@@ -40,8 +43,10 @@ support_level/*
 !support_level/firmware/
 !support_level/linux_document/
 !support_level/m_freertos_sdk/
+!support_level/to_absorb/
 !support_level/toolchain/
 !support_level/tools/
+!support_level/work/
 
 support_level/board_knowledge/*
 !support_level/board_knowledge/README.md
@@ -66,6 +71,9 @@ support_level/linux_document/*
 
 support_level/m_freertos_sdk/*
 !support_level/m_freertos_sdk/README.md
+
+support_level/to_absorb/*
+!support_level/to_absorb/README.md
 
 support_level/compile_targets/*
 !support_level/compile_targets/README.md
@@ -97,10 +105,10 @@ support_level/code_assets/projects/*
 !support_level/code_assets/projects/imx-mkimage/
 !support_level/code_assets/projects/imx-oei/
 !support_level/code_assets/projects/imx-optee-os/
+!support_level/code_assets/projects/imx-scfw-porting-kit/
 !support_level/code_assets/projects/imx-sm/
 !support_level/code_assets/projects/linux-imx/
 !support_level/code_assets/projects/mcuxsdk-core/
-!support_level/code_assets/projects/mcuxsdk-manifests/
 !support_level/code_assets/projects/meta-real-time-edge/
 !support_level/code_assets/projects/real-time-edge-linux/
 !support_level/code_assets/projects/real-time-edge-uboot/
@@ -111,10 +119,10 @@ support_level/code_assets/projects/imx-atf/*
 support_level/code_assets/projects/imx-mkimage/*
 support_level/code_assets/projects/imx-oei/*
 support_level/code_assets/projects/imx-optee-os/*
+support_level/code_assets/projects/imx-scfw-porting-kit/*
 support_level/code_assets/projects/imx-sm/*
 support_level/code_assets/projects/linux-imx/*
 support_level/code_assets/projects/mcuxsdk-core/*
-support_level/code_assets/projects/mcuxsdk-manifests/*
 support_level/code_assets/projects/meta-real-time-edge/*
 support_level/code_assets/projects/real-time-edge-linux/*
 support_level/code_assets/projects/real-time-edge-uboot/*
@@ -123,10 +131,10 @@ support_level/code_assets/projects/uboot-imx/*
 !support_level/code_assets/projects/imx-mkimage/USAGE.md
 !support_level/code_assets/projects/imx-oei/USAGE.md
 !support_level/code_assets/projects/imx-optee-os/USAGE.md
+!support_level/code_assets/projects/imx-scfw-porting-kit/USAGE.md
 !support_level/code_assets/projects/imx-sm/USAGE.md
 !support_level/code_assets/projects/linux-imx/USAGE.md
 !support_level/code_assets/projects/mcuxsdk-core/USAGE.md
-!support_level/code_assets/projects/mcuxsdk-manifests/USAGE.md
 !support_level/code_assets/projects/meta-real-time-edge/USAGE.md
 !support_level/code_assets/projects/real-time-edge-linux/USAGE.md
 !support_level/code_assets/projects/real-time-edge-uboot/USAGE.md
@@ -134,18 +142,21 @@ support_level/code_assets/projects/uboot-imx/*
 
 support_level/code_assets/workspaces/*
 !support_level/code_assets/workspaces/README.md
-!support_level/code_assets/workspaces/rte-hmc-latest/
-!support_level/code_assets/workspaces/rte33-zsdk/
-support_level/code_assets/workspaces/rte-hmc-latest/*
-!support_level/code_assets/workspaces/rte-hmc-latest/README.md
-support_level/code_assets/workspaces/rte33-zsdk/*
-!support_level/code_assets/workspaces/rte33-zsdk/README.md
+!support_level/code_assets/workspaces/hmc-workspace/
+!support_level/code_assets/workspaces/zephyr-workspace/
+support_level/code_assets/workspaces/hmc-workspace/*
+!support_level/code_assets/workspaces/hmc-workspace/README.md
+support_level/code_assets/workspaces/zephyr-workspace/*
+!support_level/code_assets/workspaces/zephyr-workspace/README.md
 
 support_level/toolchain/*
 !support_level/toolchain/README.md
 
 support_level/tools/*
 !support_level/tools/README.md
+
+support_level/work/*
+!support_level/work/README.md
 !support_level/tools/bcu/
 !support_level/tools/imx-rm/
 !support_level/tools/uuu/
