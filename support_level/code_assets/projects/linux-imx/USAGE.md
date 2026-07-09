@@ -10,7 +10,74 @@
 1. 先确认任务是不是落到通用 `linux-imx` BSP 内核线
 2. 先核对当前 ref
 3. 只读检查可直接在这里做
-4. 要改内核、编译、出 `Image/dtb/modules`，复制到 `../../work/<case>/` 再做
+4. 要改内核、编译、出 `Image/dtb/modules`，复制到 `../../../work/<case>/` 再做
+
+## 构建前提
+
+先钉死这些字段，再开始编：
+
+- 当前任务确实属于通用 `linux-imx`，不是 `real-time-edge-linux`
+- 目标板型和目标 `dtb` 名称明确
+- 工具链属于 A-core / Linux side
+- 工作目录是 `../../../work/<case>/` 里的 case-local copy
+
+本地可用 A-core Linux 工具链：
+
+```bash
+export CROSS_COMPILE=/home/ives/桌面/NXP_v2/support_level/toolchain/arm-gnu-toolchain-14.3.rel1-x86_64-aarch64-none-linux-gnu/bin/aarch64-none-linux-gnu-
+export ARCH=arm64
+```
+
+## 典型构建命令
+
+通用配置：
+
+```bash
+cd /home/ives/桌面/NXP_v2/support_level/work/<case>/linux-imx
+make ARCH=arm64 CROSS_COMPILE=$CROSS_COMPILE O=build imx_v8_defconfig
+```
+
+构建常见内核产物：
+
+```bash
+make ARCH=arm64 CROSS_COMPILE=$CROSS_COMPILE O=build -j$(nproc) Image dtbs modules
+```
+
+只构建指定 dtb：
+
+```bash
+make ARCH=arm64 CROSS_COMPILE=$CROSS_COMPILE O=build freescale/imx943-evk.dtb
+```
+
+安装 modules 到 staging 目录：
+
+```bash
+make ARCH=arm64 CROSS_COMPILE=$CROSS_COMPILE O=build INSTALL_MOD_PATH=modules-out modules_install
+```
+
+## 产物位置
+
+使用 `O=build` 时，典型产物在：
+
+```text
+build/arch/arm64/boot/Image
+build/arch/arm64/boot/dts/freescale/<board>.dtb
+modules-out/lib/modules/<kernel-release>/
+```
+
+不使用 `O=build` 时，产物会落在源码树内：
+
+```text
+arch/arm64/boot/Image
+arch/arm64/boot/dts/freescale/<board>.dtb
+```
+
+## 构建边界
+
+- `linux-imx` 负责 `Image`、`dtb`、`.ko`
+- `linux-imx` 不负责上板传输、启动、登录或运行态证明
+- `RTE` Linux 先切到 `real-time-edge-linux`，不要在这里强行套用通用 Linux 路径
+- 如果当前问题仍是启动链早期失败，不要默认通过重编 Linux 解决
 
 ## 已吸收：`imx943-linux` 输入角色
 
@@ -46,6 +113,4 @@
 
 ## 待补全
 
-- 不同芯片/版本的编译方式
-- 典型产物位置
 - 相关旧 skill 的吸收结果
