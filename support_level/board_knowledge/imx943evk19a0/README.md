@@ -11,6 +11,8 @@
 - 默认 Linux / `U-Boot` console：
   `/dev/ttyUSB2`
 - `/dev/ttyUSB3` 更偏向 `SM` / monitor console，不默认当 Linux shell
+- 机器可读串口映射：
+  `serial.yaml`
 - 默认 `bcu` board token：
   `imx943evk19a0`
 

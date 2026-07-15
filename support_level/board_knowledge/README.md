@@ -80,3 +80,21 @@ board_knowledge/
 - 已验证的高频注意事项
 - 已验证的启动阶段判断边界
 - 已验证的上板写入 -> 启动 -> 登录交接边界
+
+如果某块板有稳定的串口映射，
+同时放一个机器可读文件：
+
+```text
+board_knowledge/
+  <board-id>/
+    serial.yaml
+```
+
+`serial.yaml` 只放给 `tools/serial-console` 消费的串口事实：
+
+- 默认 baudrate
+- role 到 `/dev/serial/by-id/*` / `ttyUSB*` 的映射
+- 串口侧已验证风险
+
+串口工具的命令语义不写在这里；
+工具用法继续看 `../tools/serial-console/USAGE.md`。

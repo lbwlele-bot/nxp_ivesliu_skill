@@ -1,0 +1,17 @@
+board: imx943evk19a0
+adapter: FTDI-style multi-port UART
+baudrate: 115200
+format: 8N1
+prefer_by_id: true
+ports:
+  a-core:
+    by_id: usb-FTDI_Quad_RS232-HS-if02-port0
+    tty: /dev/ttyUSB2
+    description: Default U-Boot and Linux console
+  sm:
+    by_id: usb-FTDI_Quad_RS232-HS-if03-port0
+    tty: /dev/ttyUSB3
+    description: SM or monitor console
+notes:
+  - ttyUSB3 is not the default Linux shell.
+  - Prefer the a-core role for U-Boot stop and Linux login unless live evidence overrides it.

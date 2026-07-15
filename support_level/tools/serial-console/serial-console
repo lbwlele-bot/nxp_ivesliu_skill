@@ -1,0 +1,344 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import os
+from pathlib import Path
+import re
+import select
+import subprocess
+import sys
+import time
+import tty
+import termios
+from typing import Any
+
+import serial
+import yaml
+
+
+SUPPORT_ROOT = Path(__file__).resolve().parents[2]
+BOARD_ROOT = SUPPORT_ROOT / "board_knowledge"
+
+
+def load_profile(board: str) -> dict[str, Any]:
+    path = BOARD_ROOT / board / "serial.yaml"
+    if not path.is_file():
+        raise SystemExit(f"serial profile not found: {path}")
+    with path.open("r", encoding="utf-8") as handle:
+        data = yaml.safe_load(handle) or {}
+    if not isinstance(data, dict):
+        raise SystemExit(f"invalid serial profile: {path}")
+    return data
+
+
+def by_id_dir() -> Path:
+    return Path("/dev/serial/by-id")
+
+
+def list_by_id() -> dict[str, str]:
+    root = by_id_dir()
+    if not root.exists():
+        return {}
+    result: dict[str, str] = {}
+    for path in sorted(root.iterdir()):
+        if path.is_symlink():
+            result[path.name] = str(path.resolve())
+    return result
+
+
+def list_ttyusb() -> list[str]:
+    return sorted(str(path) for path in Path("/dev").glob("ttyUSB*"))
+
+
+def get_ports(profile: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    ports = profile.get("ports") or {}
+    if not isinstance(ports, dict):
+        raise SystemExit("serial profile field 'ports' must be a mapping")
+    return ports
+
+
+def resolve_device(profile: dict[str, Any], role: str | None, device: str | None) -> str:
+    if device:
+        return device
+    if not role:
+        raise SystemExit("pass --role or --device")
+    ports = get_ports(profile)
+    if role not in ports:
+        known = ", ".join(sorted(ports)) or "<none>"
+        raise SystemExit(f"unknown role '{role}'. known roles: {known}")
+
+    entry = ports[role] or {}
+    by_id = entry.get("by_id")
+    if by_id:
+        candidate = by_id_dir() / by_id
+        if candidate.exists():
+            return str(candidate)
+
+    tty_path = entry.get("tty")
+    if tty_path:
+        return str(tty_path)
+
+    raise SystemExit(f"role '{role}' has no by_id or tty mapping")
+
+
+def profile_baud(profile: dict[str, Any], baud: int | None) -> int:
+    return int(baud or profile.get("baudrate") or 115200)
+
+
+def open_serial(device: str, baud: int, timeout: float) -> serial.Serial:
+    return serial.Serial(
+        port=device,
+        baudrate=baud,
+        bytesize=serial.EIGHTBITS,
+        parity=serial.PARITY_NONE,
+        stopbits=serial.STOPBITS_ONE,
+        timeout=timeout,
+        xonxoff=False,
+        rtscts=False,
+        dsrdtr=False,
+    )
+
+
+def append_log(log_path: str | None, data: bytes) -> None:
+    if not log_path or not data:
+        return
+    path = Path(log_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("ab") as handle:
+        handle.write(data)
+
+
+def emit(data: bytes) -> None:
+    if not data:
+        return
+    sys.stdout.buffer.write(data)
+    sys.stdout.buffer.flush()
+
+
+def cmd_list(args: argparse.Namespace) -> int:
+    profile = load_profile(args.board) if args.board else {}
+    by_id = list_by_id()
+    ttyusb = list_ttyusb()
+
+    print("by-id:")
+    for name, target in by_id.items():
+        print(f"  {name} -> {target}")
+    if not by_id:
+        print("  <none>")
+
+    print("ttyUSB:")
+    for path in ttyusb:
+        print(f"  {path}")
+    if not ttyusb:
+        print("  <none>")
+
+    if profile:
+        print(f"board: {args.board}")
+        print(f"baudrate: {profile_baud(profile, args.baud)}")
+        for role, entry in get_ports(profile).items():
+            device = resolve_device(profile, role, None)
+            desc = entry.get("description", "")
+            print(f"  {role}: {device}" + (f" ({desc})" if desc else ""))
+    return 0
+
+
+def stty_device(device: str, baud: int) -> tuple[int, str]:
+    cmd = [
+        "stty",
+        "-F",
+        device,
+        str(baud),
+        "cs8",
+        "-cstopb",
+        "-parenb",
+        "-crtscts",
+        "-ixon",
+        "-ixoff",
+        "raw",
+        "-echo",
+    ]
+    proc = subprocess.run(cmd, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    return proc.returncode, proc.stdout.strip()
+
+
+def cmd_prepare(args: argparse.Namespace) -> int:
+    profile = load_profile(args.board)
+    baud = profile_baud(profile, args.baud)
+    if args.stop_modemmanager:
+        proc = subprocess.run(
+            ["sudo", "-n", "systemctl", "stop", "ModemManager"],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
+        print(f"ModemManager stop: exit={proc.returncode}")
+        if proc.stdout.strip():
+            print(proc.stdout.strip())
+
+    roles = args.role or sorted(get_ports(profile))
+    status = 0
+    for role in roles:
+        device = resolve_device(profile, role, None)
+        code, output = stty_device(device, baud)
+        print(f"{role}: {device}: stty exit={code}")
+        if output:
+            print(output)
+        status = status or code
+    return status
+
+
+def cmd_capture(args: argparse.Namespace) -> int:
+    profile = load_profile(args.board)
+    device = resolve_device(profile, args.role, args.device)
+    baud = profile_baud(profile, args.baud)
+    deadline = time.monotonic() + args.timeout
+    with open_serial(device, baud, args.read_timeout) as ser:
+        while time.monotonic() < deadline:
+            data = ser.read(args.chunk_size)
+            if data:
+                append_log(args.log, data)
+                emit(data)
+    return 0
+
+
+def cmd_send(args: argparse.Namespace) -> int:
+    profile = load_profile(args.board)
+    device = resolve_device(profile, args.role, args.device)
+    baud = profile_baud(profile, args.baud)
+    with open_serial(device, baud, args.read_timeout) as ser:
+        for command in args.cmd:
+            payload = command.encode() + args.line_ending.encode("utf-8")
+            ser.write(payload)
+            append_log(args.log, payload)
+        if args.capture_after > 0:
+            deadline = time.monotonic() + args.capture_after
+            while time.monotonic() < deadline:
+                data = ser.read(args.chunk_size)
+                if data:
+                    append_log(args.log, data)
+                    emit(data)
+    return 0
+
+
+def cmd_uboot_stop(args: argparse.Namespace) -> int:
+    profile = load_profile(args.board)
+    device = resolve_device(profile, args.role, args.device)
+    baud = profile_baud(profile, args.baud)
+    trigger = args.trigger.encode()
+    prompt_re = re.compile(args.prompt.encode())
+    deadline = time.monotonic() + args.timeout
+    seen = bytearray()
+    sent = False
+
+    with open_serial(device, baud, args.read_timeout) as ser:
+        while time.monotonic() < deadline:
+            data = ser.read(args.chunk_size)
+            if data:
+                seen.extend(data)
+                append_log(args.log, data)
+                emit(data)
+                if not sent and trigger in seen:
+                    payload = args.interrupt.encode("utf-8")
+                    ser.write(payload)
+                    append_log(args.log, payload)
+                    sent = True
+                if sent and prompt_re.search(bytes(seen)):
+                    return 0
+
+    if not sent:
+        print("\ntrigger not seen before timeout", file=sys.stderr)
+        return 2
+    print("\nprompt not seen after interrupt", file=sys.stderr)
+    return 3
+
+
+def cmd_shell(args: argparse.Namespace) -> int:
+    profile = load_profile(args.board)
+    device = resolve_device(profile, args.role, args.device)
+    baud = profile_baud(profile, args.baud)
+    old_attrs = termios.tcgetattr(sys.stdin)
+    try:
+        tty.setraw(sys.stdin.fileno())
+        with open_serial(device, baud, 0) as ser:
+            while True:
+                readable, _, _ = select.select([sys.stdin, ser], [], [])
+                if ser in readable:
+                    data = ser.read(4096)
+                    append_log(args.log, data)
+                    emit(data)
+                if sys.stdin in readable:
+                    data = os.read(sys.stdin.fileno(), 1024)
+                    if data in {b"\x1d", b"\x1d\r", b"\x1d\n"}:
+                        break
+                    ser.write(data)
+                    append_log(args.log, data)
+    finally:
+        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_attrs)
+    return 0
+
+
+def add_common(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--board", required=True, help="board_knowledge board id")
+    parser.add_argument("--role", help="serial role from board serial.yaml")
+    parser.add_argument("--device", help="explicit serial device path")
+    parser.add_argument("--baud", type=int, help="override baudrate")
+    parser.add_argument("--log", help="append raw serial data to this log file")
+    parser.add_argument("--read-timeout", type=float, default=0.1)
+    parser.add_argument("--chunk-size", type=int, default=512)
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="NXP lab serial console wrapper")
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    p_list = sub.add_parser("list", help="list serial devices and board role mappings")
+    p_list.add_argument("--board", help="optional board_knowledge board id")
+    p_list.add_argument("--baud", type=int, help="override baudrate")
+    p_list.set_defaults(func=cmd_list)
+
+    p_prepare = sub.add_parser("prepare", help="apply board serial stty settings")
+    p_prepare.add_argument("--board", required=True)
+    p_prepare.add_argument("--role", action="append", help="role to prepare; default: all roles")
+    p_prepare.add_argument("--baud", type=int, help="override baudrate")
+    p_prepare.add_argument("--stop-modemmanager", action="store_true")
+    p_prepare.set_defaults(func=cmd_prepare)
+
+    p_capture = sub.add_parser("capture", help="capture serial output")
+    add_common(p_capture)
+    p_capture.add_argument("--timeout", type=float, default=30.0)
+    p_capture.set_defaults(func=cmd_capture)
+
+    p_send = sub.add_parser("send", help="send commands to a serial port")
+    add_common(p_send)
+    p_send.add_argument("--cmd", action="append", required=True)
+    p_send.add_argument("--line-ending", default="\r")
+    p_send.add_argument("--capture-after", type=float, default=2.0)
+    p_send.set_defaults(func=cmd_send)
+
+    p_stop = sub.add_parser("uboot-stop", help="wait for autoboot prompt and interrupt")
+    add_common(p_stop)
+    p_stop.add_argument("--timeout", type=float, default=10.0)
+    p_stop.add_argument("--trigger", default="Hit any key to stop autoboot")
+    p_stop.add_argument("--interrupt", default="\r")
+    p_stop.add_argument("--prompt", default=rb"(=>|U-Boot[#>])".decode())
+    p_stop.set_defaults(func=cmd_uboot_stop)
+
+    p_shell = sub.add_parser("shell", help="interactive serial shell; exit with Ctrl-]")
+    add_common(p_shell)
+    p_shell.set_defaults(func=cmd_shell)
+    return parser
+
+
+def main() -> int:
+    parser = build_parser()
+    args = parser.parse_args()
+    try:
+        return int(args.func(args))
+    except (serial.SerialException, OSError) as exc:
+        print(f"serial-console: {exc}", file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

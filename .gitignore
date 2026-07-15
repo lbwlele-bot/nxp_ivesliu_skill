@@ -61,9 +61,13 @@ support_level/board_knowledge/imx93evk14/*
 support_level/board_knowledge/imx943evk19a0/*
 support_level/board_knowledge/imx95evk19/*
 !support_level/board_knowledge/imx8dxlevk/README.md
+!support_level/board_knowledge/imx8dxlevk/serial.yaml
 !support_level/board_knowledge/imx93evk14/README.md
+!support_level/board_knowledge/imx93evk14/serial.yaml
 !support_level/board_knowledge/imx943evk19a0/README.md
+!support_level/board_knowledge/imx943evk19a0/serial.yaml
 !support_level/board_knowledge/imx95evk19/README.md
+!support_level/board_knowledge/imx95evk19/serial.yaml
 
 support_level/firmware/*
 !support_level/firmware/README.md
@@ -161,10 +165,14 @@ support_level/work/*
 !support_level/work/README.md
 !support_level/tools/bcu/
 !support_level/tools/imx-rm/
+!support_level/tools/serial-console/
 !support_level/tools/uuu/
 support_level/tools/bcu/*
 support_level/tools/imx-rm/*
+support_level/tools/serial-console/*
 support_level/tools/uuu/*
 !support_level/tools/bcu/USAGE.md
 !support_level/tools/imx-rm/README.md
+!support_level/tools/serial-console/USAGE.md
+!support_level/tools/serial-console/serial-console
 !support_level/tools/uuu/USAGE.md

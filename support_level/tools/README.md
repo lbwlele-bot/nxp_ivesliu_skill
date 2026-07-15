@@ -14,10 +14,13 @@ tools/
 例如：
 
 ```text
-tools/
+ tools/
   bcu/
     USAGE.md
     bcu
+  serial-console/
+    USAGE.md
+    serial-console
   uuu/
     USAGE.md
     uuu
@@ -37,3 +40,4 @@ tools/
 - `bcu/`
 - `uuu/`
 - `imx-rm/`
+- `serial-console/`

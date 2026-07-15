@@ -10,6 +10,8 @@
 
 - 已验证 UART 适配器：
   `0403:6011 FT4232H`
+- 机器可读串口映射：
+  `serial.yaml`
 - 已验证串口映射：
   - `ttyUSB1`：`M4`
   - `ttyUSB2`：`U-Boot` / `Fastboot` / Linux early boot
@@ -43,6 +45,8 @@
 
 对日志敏感的操作：
 
+- 使用统一工具：
+  `../../tools/serial-console/serial-console`
 - 优先 `/dev/serial/by-id/...`
   而不是裸 `ttyUSB*`
 - 先停 `ModemManager`

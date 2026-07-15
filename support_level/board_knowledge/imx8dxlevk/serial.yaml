@@ -1,0 +1,21 @@
+board: imx8dxlevk
+adapter: FT4232H Quad HS USB-UART/FIFO IC
+baudrate: 115200
+format: 8N1
+prefer_by_id: true
+ports:
+  m4:
+    by_id: usb-FTDI_Quad_RS232-HS-if01-port0
+    tty: /dev/ttyUSB1
+    description: M4 console
+  a-core:
+    by_id: usb-FTDI_Quad_RS232-HS-if02-port0
+    tty: /dev/ttyUSB2
+    description: U-Boot, Fastboot, Linux early boot
+  scfw:
+    by_id: usb-FTDI_Quad_RS232-HS-if03-port0
+    tty: /dev/ttyUSB3
+    description: SCFW console
+host_hazards:
+  - ModemManager can disturb FT4232H ports.
+  - ttyUSB0 and ttyUSB1 can silently fall back to 9600 after re-enumeration.

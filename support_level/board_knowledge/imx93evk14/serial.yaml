@@ -1,0 +1,13 @@
+board: imx93evk14
+adapter: FTDI-style multi-port UART
+baudrate: 115200
+format: 8N1
+prefer_by_id: true
+ports:
+  m33:
+    by_id: usb-FTDI_Quad_RS232-HS-if03-port0
+    tty: /dev/ttyUSB3
+    description: M33 console observed in local case evidence
+notes:
+  - Do not assume a universal Linux console from historical notes.
+  - Identify the active console before sending state-changing commands.

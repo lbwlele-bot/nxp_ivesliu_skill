@@ -87,6 +87,9 @@
 - 当前已知可用的标准 demo：
   `imx93-14x14-evk_m33_TCM_power_mode_switch.bin`
 - 历史已知 `U-Boot` 路径可以通过 `bootaux` 带起 M33
+- 本地 case 证据里，M33 console 曾出现在 `ttyUSB3`
+- 机器可读串口映射见：
+  `serial.yaml`
 - 不要把 `remoteproc stop` 当成通用默认动作
 
 ## 交接边界
