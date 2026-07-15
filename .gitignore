@@ -31,6 +31,8 @@ workspace/.agents/skills/understanding/*
 !workspace/.agents/skills/compile/SKILL.md
 !workspace/.agents/skills/support/SKILL.md
 !workspace/.agents/skills/understanding/SKILL.md
+!workspace/.agents/skills/understanding/references/
+!workspace/.agents/skills/understanding/references/*.md
 
 # Under support_level, default to ignoring external downloads and heavy assets:
 # image packages, SoC资料, SDK/toolchain payloads, cloned source trees, and tool binaries.
