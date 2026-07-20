@@ -1,0 +1,33 @@
+schema_version: 1
+id: imx-optee-os
+type: git_project
+human_doc: USAGE.md
+owner: compile
+
+summary: OP-TEE secure world 源码项目，RTE 等链路中可提供 tee.bin 作为 flash.bin 输入。
+
+relations:
+  projects:
+    - imx-atf
+  compile_targets:
+    - flashbin
+  software_stacks:
+    - rte
+  release_packages: []
+  boards: []
+  tools: []
+
+case_required_for:
+  - patched_optee
+  - rebuilt_optee
+  - generated_tee_bin
+
+warnings:
+  - OP-TEE requirement is decided by the software stack and current flashbin chain, not by this project alone.
+  - If tee.bin is required, preserve the tee-raw.bin to tee.bin provenance in the current case.
+  - Do not treat an existing tee.bin file as valid without confirming source, version, and configuration.
+
+evidence:
+  - USAGE.md
+  - ../../../software_stacks/rte.md
+  - ../../../compile_targets/flashbin/README.md

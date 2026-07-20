@@ -1,0 +1,35 @@
+schema_version: 1
+id: meta-real-time-edge
+type: git_project
+human_doc: USAGE.md
+owner: compile
+
+summary: Real-Time Edge Yocto layer，用于查 RTE image、machine、bbappend、patch bucket 和分支线索。
+
+relations:
+  projects:
+    - imx-atf
+    - imx-sm
+    - uboot-imx
+    - real-time-edge-uboot
+  compile_targets: []
+  software_stacks:
+    - rte
+  release_packages: []
+  boards: []
+  tools: []
+
+case_required_for:
+  - patched_layer
+  - yocto_build
+  - generated_rte_artifacts
+
+warnings:
+  - meta-real-time-edge is not the owner of the full RTE rules; read software_stacks/rte.md first.
+  - Do not copy the whole layer patch set into one project; split patches by recipe or bbappend bucket.
+  - Layer branch hints do not replace the current case's required RTE version.
+  - Relations to projects are patch, recipe, or branch-hint relationships, not instructions to apply the whole layer.
+
+evidence:
+  - USAGE.md
+  - ../../../software_stacks/rte.md

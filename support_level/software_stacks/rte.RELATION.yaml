@@ -1,0 +1,38 @@
+schema_version: 1
+id: rte
+type: software_stack
+human_doc: rte.md
+owner: compile
+
+summary: Real-Time Edge 软件线，影响 LF/BSP 家族、源码 ref、release 包和 flash.bin 输入集合。
+
+relations:
+  projects:
+    - imx-atf
+    - imx-sm
+    - imx-optee-os
+    - uboot-imx
+    - real-time-edge-uboot
+    - linux-imx
+    - real-time-edge-linux
+    - meta-real-time-edge
+  compile_targets:
+    - flashbin
+    - linux
+  software_stacks: []
+  release_packages:
+    - m_freertos_sdk_package
+    - scfw
+  boards: []
+  tools: []
+
+case_required_for: []
+
+warnings:
+  - RTE is a cross-project software stack identity, not a single source ref.
+  - RTE version must be confirmed before selecting refs or release packages.
+  - RTE name alone must not decide flash_a55 or flash_all.
+  - RTE constraints belong here first; project USAGE files only describe selected local actions.
+
+evidence:
+  - rte.md

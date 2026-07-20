@@ -51,6 +51,11 @@
 
 旧根只在缺项追溯或核对来源时再回看。
 
+如果目标目录旁边存在 `RELATION.yaml` 或 `<id>.RELATION.yaml`，
+先把它当机器索引读一遍，用来确认 owner、关联对象、case 边界和 warning；
+随后仍以同目录 `README.md` / `USAGE.md` 作为人读权威说明。
+如果 YAML 和 README / USAGE 冲突，暂停使用该 YAML 关系，回到人读文档核对。
+
 ### 办事步骤
 
 #### 第 1 步：确认信息

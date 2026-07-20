@@ -1,0 +1,33 @@
+schema_version: 1
+id: scfw
+type: release_package
+human_doc: README.md
+owner: support
+
+summary: i.MX8 系列 SCFW porting kit release 包资产入口，服务 SCFW 与 flash.bin 链路核对。
+
+relations:
+  projects: []
+  compile_targets:
+    - flashbin
+  software_stacks:
+    - rte
+  release_packages: []
+  boards: []
+  tools: []
+
+case_required_for:
+  - patched_scfw
+  - rebuilt_scfw
+  - generated_scfw_output
+
+warnings:
+  - SCFW has strict SoC, silicon revision, and BSP release version matching.
+  - This is a vendor release package, not a normal Git source baseline.
+  - If the required SCFW release is not local, ask the user to provide or download the official package.
+  - Do not use the local 1.18.0 package as a silent substitute for another required release.
+
+evidence:
+  - README.md
+  - ../../compile_targets/flashbin/README.md
+  - ../../software_stacks/rte.md

@@ -13,9 +13,28 @@
 # Keep workspace docs and local skills.
 workspace/*
 !workspace/AGENTS.md
-!workspace/ARCHITECTURE.md
-!workspace/CONSTRUCTION.md
+!workspace/docs/
 !workspace/.agents/
+workspace/docs/*
+!workspace/docs/README.md
+!workspace/docs/architecture-construction/
+workspace/docs/architecture-construction/*
+!workspace/docs/architecture-construction/README.md
+!workspace/docs/architecture-construction/v1/
+!workspace/docs/architecture-construction/v2/
+!workspace/docs/architecture-construction/v3/
+workspace/docs/architecture-construction/v1/*
+workspace/docs/architecture-construction/v2/*
+workspace/docs/architecture-construction/v3/*
+!workspace/docs/architecture-construction/v1/README.md
+!workspace/docs/architecture-construction/v2/ARCHITECTURE.md
+!workspace/docs/architecture-construction/v2/CONSTRUCTION.md
+!workspace/docs/architecture-construction/v2/previous/
+workspace/docs/architecture-construction/v2/previous/*
+!workspace/docs/architecture-construction/v2/previous/ARCHITECTURE_V2.md
+!workspace/docs/architecture-construction/v2/previous/CONSTRUCTION_V2.md
+!workspace/docs/architecture-construction/v3/ARCHITECTURE.md
+!workspace/docs/architecture-construction/v3/CONSTRUCTION.md
 workspace/.agents/*
 !workspace/.agents/skills/
 workspace/.agents/skills/*
@@ -63,12 +82,16 @@ support_level/board_knowledge/imx943evk19a0/*
 support_level/board_knowledge/imx95evk19/*
 !support_level/board_knowledge/imx8dxlevk/README.md
 !support_level/board_knowledge/imx8dxlevk/serial.yaml
+!support_level/board_knowledge/imx8dxlevk/RELATION.yaml
 !support_level/board_knowledge/imx93evk14/README.md
 !support_level/board_knowledge/imx93evk14/serial.yaml
+!support_level/board_knowledge/imx93evk14/RELATION.yaml
 !support_level/board_knowledge/imx943evk19a0/README.md
 !support_level/board_knowledge/imx943evk19a0/serial.yaml
+!support_level/board_knowledge/imx943evk19a0/RELATION.yaml
 !support_level/board_knowledge/imx95evk19/README.md
 !support_level/board_knowledge/imx95evk19/serial.yaml
+!support_level/board_knowledge/imx95evk19/RELATION.yaml
 
 support_level/firmware/*
 !support_level/firmware/README.md
@@ -83,11 +106,14 @@ support_level/release_packages/*
 support_level/release_packages/m_freertos_sdk/*
 support_level/release_packages/scfw/*
 !support_level/release_packages/m_freertos_sdk/README.md
+!support_level/release_packages/m_freertos_sdk/RELATION.yaml
 !support_level/release_packages/scfw/README.md
+!support_level/release_packages/scfw/RELATION.yaml
 
 support_level/software_stacks/*
 !support_level/software_stacks/README.md
 !support_level/software_stacks/rte.md
+!support_level/software_stacks/*.RELATION.yaml
 
 support_level/to_absorb/*
 !support_level/to_absorb/README.md
@@ -105,10 +131,15 @@ support_level/compile_targets/linux/*
 support_level/compile_targets/m_freertos_sdk/*
 support_level/compile_targets/zephyr/*
 !support_level/compile_targets/a55_rtos/README.md
+!support_level/compile_targets/a55_rtos/RELATION.yaml
 !support_level/compile_targets/flashbin/README.md
+!support_level/compile_targets/flashbin/RELATION.yaml
 !support_level/compile_targets/linux/README.md
+!support_level/compile_targets/linux/RELATION.yaml
 !support_level/compile_targets/m_freertos_sdk/README.md
+!support_level/compile_targets/m_freertos_sdk/RELATION.yaml
 !support_level/compile_targets/zephyr/README.md
+!support_level/compile_targets/zephyr/RELATION.yaml
 
 support_level/code_assets/*
 !support_level/code_assets/README.md
@@ -145,17 +176,29 @@ support_level/code_assets/projects/real-time-edge-linux/*
 support_level/code_assets/projects/real-time-edge-uboot/*
 support_level/code_assets/projects/uboot-imx/*
 !support_level/code_assets/projects/imx-atf/USAGE.md
+!support_level/code_assets/projects/imx-atf/RELATION.yaml
 !support_level/code_assets/projects/imx-mkimage/USAGE.md
+!support_level/code_assets/projects/imx-mkimage/RELATION.yaml
 !support_level/code_assets/projects/imx-oei/USAGE.md
+!support_level/code_assets/projects/imx-oei/RELATION.yaml
 !support_level/code_assets/projects/imx-optee-os/USAGE.md
+!support_level/code_assets/projects/imx-optee-os/RELATION.yaml
 !support_level/code_assets/projects/imx-sm/USAGE.md
+!support_level/code_assets/projects/imx-sm/RELATION.yaml
 !support_level/code_assets/projects/linux-imx/USAGE.md
+!support_level/code_assets/projects/linux-imx/RELATION.yaml
 !support_level/code_assets/projects/mcuxsdk-core/USAGE.md
+!support_level/code_assets/projects/mcuxsdk-core/RELATION.yaml
 !support_level/code_assets/projects/mcuxsdk-manifests/USAGE.md
+!support_level/code_assets/projects/mcuxsdk-manifests/RELATION.yaml
 !support_level/code_assets/projects/meta-real-time-edge/USAGE.md
+!support_level/code_assets/projects/meta-real-time-edge/RELATION.yaml
 !support_level/code_assets/projects/real-time-edge-linux/USAGE.md
+!support_level/code_assets/projects/real-time-edge-linux/RELATION.yaml
 !support_level/code_assets/projects/real-time-edge-uboot/USAGE.md
+!support_level/code_assets/projects/real-time-edge-uboot/RELATION.yaml
 !support_level/code_assets/projects/uboot-imx/USAGE.md
+!support_level/code_assets/projects/uboot-imx/RELATION.yaml
 
 support_level/code_assets/workspaces/*
 !support_level/code_assets/workspaces/README.md
@@ -163,8 +206,10 @@ support_level/code_assets/workspaces/*
 !support_level/code_assets/workspaces/zephyr-workspace/
 support_level/code_assets/workspaces/hmc-workspace/*
 !support_level/code_assets/workspaces/hmc-workspace/README.md
+!support_level/code_assets/workspaces/hmc-workspace/RELATION.yaml
 support_level/code_assets/workspaces/zephyr-workspace/*
 !support_level/code_assets/workspaces/zephyr-workspace/README.md
+!support_level/code_assets/workspaces/zephyr-workspace/RELATION.yaml
 
 support_level/toolchain/*
 !support_level/toolchain/README.md

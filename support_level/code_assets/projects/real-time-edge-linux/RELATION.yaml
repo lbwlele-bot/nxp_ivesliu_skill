@@ -1,0 +1,36 @@
+schema_version: 1
+id: real-time-edge-linux
+type: git_project
+human_doc: USAGE.md
+owner: compile
+
+summary: Real-Time Edge Linux 内核源码线，负责 RTE Linux 侧 Image、dtb、modules 等产物。
+
+relations:
+  projects:
+    - linux-imx
+    - meta-real-time-edge
+  compile_targets:
+    - linux
+  software_stacks:
+    - rte
+  release_packages: []
+  boards: []
+  tools: []
+
+case_required_for:
+  - patched_rte_kernel
+  - generated_image
+  - generated_dtb
+  - generated_modules
+
+warnings:
+  - This project does not decide the RTE version or the whole boot image input set.
+  - Do not infer a flash.bin recipe from the Real-Time Edge Linux source line.
+  - RTE Linux artifacts still need the linux compile target and possibly flashbin routing.
+
+evidence:
+  - USAGE.md
+  - ../../../compile_targets/linux/README.md
+  - ../../../software_stacks/rte.md
+  - ../meta-real-time-edge/USAGE.md

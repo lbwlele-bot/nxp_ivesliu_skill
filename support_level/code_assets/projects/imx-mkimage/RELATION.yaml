@@ -1,0 +1,33 @@
+schema_version: 1
+id: imx-mkimage
+type: git_project
+human_doc: USAGE.md
+owner: compile
+
+summary: 最终 boot image 打包工具，消费上游输入并产出 flash.bin。
+
+relations:
+  projects: []
+  compile_targets:
+    - flashbin
+  software_stacks:
+    - rte
+  release_packages: []
+  boards: []
+  tools: []
+
+case_required_for:
+  - prepared_inputs
+  - generated_flashbin
+
+warnings:
+  - imx-mkimage does not decide the full boot firmware input set by itself.
+  - flash_a55 and flash_all are soc.mak recipes, not top-level compile targets.
+  - Do not infer RTE, OP-TEE, ATF SPD, SMFW patches, or U-Boot source line from this project alone.
+  - Upstream input projects are selected by the flashbin compile target and current software stack.
+  - Old work flash.bin artifacts must not be reused without confirming source, version, and configuration.
+
+evidence:
+  - USAGE.md
+  - ../../../compile_targets/flashbin/README.md
+  - ../../../software_stacks/rte.md

@@ -1,0 +1,33 @@
+schema_version: 1
+id: mcuxsdk-manifests
+type: git_project
+human_doc: USAGE.md
+owner: compile
+
+summary: MCUX SDK manifest / west workspace 入口，用于理解完整 SDK workspace 组成。
+
+relations:
+  projects:
+    - mcuxsdk-core
+  compile_targets:
+    - m_freertos_sdk_target
+  software_stacks: []
+  release_packages:
+    - m_freertos_sdk_package
+  boards: []
+  tools: []
+
+case_required_for:
+  - generated_mcux_workspace
+  - modified_manifest
+
+warnings:
+  - boards/*.yml describes workspace composition, not proof that a local release SDK package exists.
+  - Do not use manifest checkout as a silent substitute for a required SDK release package.
+  - west init, west update, manifest changes, and generated workspaces belong under support_level/work/<case>/.
+
+evidence:
+  - USAGE.md
+  - ../../../compile_targets/m_freertos_sdk/README.md
+  - ../../../release_packages/m_freertos_sdk/README.md
+  - ../mcuxsdk-core/USAGE.md

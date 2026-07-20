@@ -1,0 +1,33 @@
+schema_version: 1
+id: mcuxsdk-core
+type: git_project
+human_doc: USAGE.md
+owner: compile
+
+summary: MCUX SDK core / driver / component 源码子仓，主要作为 M 核 SDK 源码参考。
+
+relations:
+  projects:
+    - mcuxsdk-manifests
+  compile_targets:
+    - m_freertos_sdk_target
+  software_stacks: []
+  release_packages:
+    - m_freertos_sdk_package
+  boards: []
+  tools: []
+
+case_required_for:
+  - patched_mcux_core
+  - generated_mcux_workspace
+
+warnings:
+  - mcuxsdk-core is not a complete SDK workspace and is not the default release SDK build entry.
+  - Do not replace a required board/version SDK release package with this source subrepo.
+  - This project does not decide whether an M core payload enters flash.bin.
+
+evidence:
+  - USAGE.md
+  - ../../../compile_targets/m_freertos_sdk/README.md
+  - ../../../release_packages/m_freertos_sdk/README.md
+  - ../mcuxsdk-manifests/USAGE.md

@@ -1,0 +1,33 @@
+schema_version: 1
+id: imx-sm
+type: git_project
+human_doc: USAGE.md
+owner: compile
+
+summary: System Manager firmware 源码项目，常作为 flash.bin 上游输入。
+
+relations:
+  projects:
+    - meta-real-time-edge
+  compile_targets:
+    - flashbin
+  software_stacks:
+    - rte
+  release_packages: []
+  boards: []
+  tools: []
+
+case_required_for:
+  - patched_smfw
+  - rebuilt_smfw
+  - generated_m33_image
+
+warnings:
+  - RTE-specific SMFW config and patches are software-stack constraints, not generic imx-sm rules.
+  - Do not start here when the actual target is a complete flash.bin; route through the flashbin compile target first.
+  - A standalone m33_image.bin build does not mean flash.bin is complete.
+
+evidence:
+  - USAGE.md
+  - ../../../software_stacks/rte.md
+  - ../../../compile_targets/flashbin/README.md

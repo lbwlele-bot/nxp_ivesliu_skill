@@ -1,0 +1,29 @@
+schema_version: 1
+id: imx-oei
+type: git_project
+human_doc: USAGE.md
+owner: compile
+
+summary: OEI 源码项目，常提供 oei-m33-ddr.bin 作为 flash.bin 上游输入。
+
+relations:
+  projects: []
+  compile_targets:
+    - flashbin
+  software_stacks: []
+  release_packages: []
+  boards: []
+  tools: []
+
+case_required_for:
+  - rebuilt_oei
+  - generated_oei_image
+
+warnings:
+  - OEI board, DDR, and revision must be checked for the current case.
+  - Do not use file existence alone to prove the OEI output matches the target revision.
+  - A standalone oei-m33-ddr.bin build does not mean flash.bin is complete.
+
+evidence:
+  - USAGE.md
+  - ../../../compile_targets/flashbin/README.md

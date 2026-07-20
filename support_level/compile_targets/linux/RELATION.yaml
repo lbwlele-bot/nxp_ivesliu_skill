@@ -1,0 +1,35 @@
+schema_version: 1
+id: linux
+type: compile_target
+human_doc: README.md
+owner: compile
+
+summary: Linux 侧编译对象，负责 kernel、dtb、modules 等产物链路。
+
+relations:
+  projects:
+    - linux-imx
+    - real-time-edge-linux
+  compile_targets:
+    - flashbin
+  software_stacks:
+    - rte
+  release_packages: []
+  boards: []
+  tools: []
+
+case_required_for:
+  - patched_kernel
+  - generated_image
+  - generated_dtb
+  - generated_modules
+
+warnings:
+  - Generic Linux and Real-Time Edge Linux must not be mapped directly to a flash.bin soc.mak recipe.
+  - Shared Linux source trees are baselines; case edits and builds must happen under support_level/work/<case>/.
+  - If Linux artifacts must enter a boot image, return to the flashbin compile target after preparing them.
+
+evidence:
+  - README.md
+  - ../../software_stacks/rte.md
+  - ../flashbin/README.md

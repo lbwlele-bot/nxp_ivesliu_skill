@@ -1,0 +1,35 @@
+schema_version: 1
+id: real-time-edge-uboot
+type: git_project
+human_doc: USAGE.md
+owner: compile
+
+summary: Real-Time Edge U-Boot 源码线，只有在 RTE 版本明确需要时才作为 U-Boot 输入来源。
+
+relations:
+  projects:
+    - uboot-imx
+    - meta-real-time-edge
+  compile_targets:
+    - flashbin
+  software_stacks:
+    - rte
+  release_packages: []
+  boards: []
+  tools: []
+
+case_required_for:
+  - patched_rte_uboot
+  - rebuilt_rte_uboot
+  - generated_uboot_input
+
+warnings:
+  - The current local copy may be an old RTE U-Boot line; verify the target RTE branch or tag before use.
+  - Do not substitute this directory for missing target-version RTE U-Boot sources.
+  - This project explains selected RTE U-Boot work, not the whole RTE software stack.
+
+evidence:
+  - USAGE.md
+  - ../../../software_stacks/rte.md
+  - ../meta-real-time-edge/USAGE.md
+  - ../../../compile_targets/flashbin/README.md

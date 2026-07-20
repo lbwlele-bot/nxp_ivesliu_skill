@@ -1,0 +1,34 @@
+schema_version: 1
+id: m_freertos_sdk_target
+type: compile_target
+human_doc: README.md
+owner: compile
+
+summary: M 核 FreeRTOS SDK 编译对象，负责独立 M 核产物或 flash.bin payload 输入。
+
+relations:
+  projects:
+    - mcuxsdk-core
+  compile_targets:
+    - flashbin
+  software_stacks:
+    - rte
+  release_packages:
+    - m_freertos_sdk_package
+  boards: []
+  tools: []
+
+case_required_for:
+  - extracted_sdk
+  - patched_sdk_project
+  - generated_mcore_payload
+
+warnings:
+  - The default build entry is the board/version matched release package, not mcuxsdk-core.
+  - Missing SDK versions must be provided by the user or confirmed as local assets; do not substitute nearby versions.
+  - A built M core payload is not the same as a complete flash.bin.
+
+evidence:
+  - README.md
+  - ../../release_packages/m_freertos_sdk/README.md
+  - ../../software_stacks/rte.md

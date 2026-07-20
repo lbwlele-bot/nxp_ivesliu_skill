@@ -32,8 +32,8 @@
 如果你第一次接触这个系统，建议按下面顺序看：
 
 1. [workspace/AGENTS.md](/home/ives/桌面/NXP_v2/workspace/AGENTS.md)
-2. [workspace/ARCHITECTURE.md](/home/ives/桌面/NXP_v2/workspace/ARCHITECTURE.md)
-3. [workspace/CONSTRUCTION.md](/home/ives/桌面/NXP_v2/workspace/CONSTRUCTION.md)
+2. [workspace/docs/architecture-construction/v3/ARCHITECTURE.md](/home/ives/桌面/NXP_v2/workspace/docs/architecture-construction/v3/ARCHITECTURE.md)
+3. [workspace/docs/architecture-construction/v3/CONSTRUCTION.md](/home/ives/桌面/NXP_v2/workspace/docs/architecture-construction/v3/CONSTRUCTION.md)
 4. [support_level/README.md](/home/ives/桌面/NXP_v2/support_level/README.md)
 
 如果你已经在处理具体任务：
@@ -48,10 +48,10 @@
 
 - [workspace/AGENTS.md](/home/ives/桌面/NXP_v2/workspace/AGENTS.md)
   回答“拿到任务后，当前系统应该怎么开工、怎么推进、case 放哪、高价值信息放哪”。
-- [workspace/ARCHITECTURE.md](/home/ives/桌面/NXP_v2/workspace/ARCHITECTURE.md)
-  回答“当前这套系统为什么这样分层、各层 owner 是谁、资源面和控制面怎么拆、Git 边界是什么”。
-- [workspace/CONSTRUCTION.md](/home/ives/桌面/NXP_v2/workspace/CONSTRUCTION.md)
-  回答“如果只有 GitHub 仓库，没有现成历史系统和资产，应该怎样从零搭起一套类似体系”。
+- [workspace/docs/architecture-construction/v3/ARCHITECTURE.md](/home/ives/桌面/NXP_v2/workspace/docs/architecture-construction/v3/ARCHITECTURE.md)
+  回答“当前这套系统为什么这样分层，以及第一步如何把稳定关系写成分布式 `RELATION.yaml`”。
+- [workspace/docs/architecture-construction/v3/CONSTRUCTION.md](/home/ives/桌面/NXP_v2/workspace/docs/architecture-construction/v3/CONSTRUCTION.md)
+  回答“怎样在关键目录旁边逐步增加机器可读关系，为未来 MCP resolver 提供可靠数据源”。
 
 如果只是使用当前系统，优先读 `AGENTS` 和 `ARCHITECTURE`。
 如果是想在另一台机器、另一个团队或另一个领域复刻这种体系，再读 `CONSTRUCTION`。
@@ -61,7 +61,7 @@
 仓库主要分成两块：
 
 - `workspace/`
-  轻量控制面。放入口规则、skill 和架构文档。
+  轻量控制面。放入口规则、skill 和长期设计文档。
 - `support_level/`
   本机支撑资源面。放重资源入口、板级知识、代码资产入口、编译对象入口、case 和待归纳信息。
 
@@ -76,10 +76,12 @@
 
 - [AGENTS.md](/home/ives/桌面/NXP_v2/workspace/AGENTS.md)
   总入口规则
-- [ARCHITECTURE.md](/home/ives/桌面/NXP_v2/workspace/ARCHITECTURE.md)
+- [docs/README.md](/home/ives/桌面/NXP_v2/workspace/docs/README.md)
+  长期设计文档入口
+- [docs/architecture-construction/v3/ARCHITECTURE.md](/home/ives/桌面/NXP_v2/workspace/docs/architecture-construction/v3/ARCHITECTURE.md)
   当前系统架构说明
-- [CONSTRUCTION.md](/home/ives/桌面/NXP_v2/workspace/CONSTRUCTION.md)
-  从零搭建这套系统的施工手册
+- [docs/architecture-construction/v3/CONSTRUCTION.md](/home/ives/桌面/NXP_v2/workspace/docs/architecture-construction/v3/CONSTRUCTION.md)
+  当前分布式关系元数据施工计划
 - `.agents/skills/understanding/SKILL.md`
   高阶理解层
 - `.agents/skills/support/SKILL.md`
@@ -317,8 +319,8 @@
 
 1. [README.md](/home/ives/桌面/NXP_v2/README.md)
 2. [workspace/AGENTS.md](/home/ives/桌面/NXP_v2/workspace/AGENTS.md)
-3. [workspace/ARCHITECTURE.md](/home/ives/桌面/NXP_v2/workspace/ARCHITECTURE.md)
-4. [workspace/CONSTRUCTION.md](/home/ives/桌面/NXP_v2/workspace/CONSTRUCTION.md)
+3. [workspace/docs/architecture-construction/v3/ARCHITECTURE.md](/home/ives/桌面/NXP_v2/workspace/docs/architecture-construction/v3/ARCHITECTURE.md)
+4. [workspace/docs/architecture-construction/v3/CONSTRUCTION.md](/home/ives/桌面/NXP_v2/workspace/docs/architecture-construction/v3/CONSTRUCTION.md)
 5. [support_level/README.md](/home/ives/桌面/NXP_v2/support_level/README.md)
 
 如果你要开始做事：

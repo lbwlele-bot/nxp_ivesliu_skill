@@ -425,7 +425,7 @@ Git 里默认不保留的是：
 
 1. `README.md`
 2. `workspace/AGENTS.md`
-3. `workspace/ARCHITECTURE.md`
+3. `workspace/docs/architecture-construction/v2/ARCHITECTURE.md`
 4. `support_level/README.md`
 5. 对应主 skill：
    `understanding` / `support` / `compile` / `board-exec`

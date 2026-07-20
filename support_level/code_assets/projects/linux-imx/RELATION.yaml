@@ -1,0 +1,34 @@
+schema_version: 1
+id: linux-imx
+type: git_project
+human_doc: USAGE.md
+owner: compile
+
+summary: 通用 Linux BSP 内核源码入口，负责 Image、dtb、modules 等 Linux 侧产物。
+
+relations:
+  projects:
+    - real-time-edge-linux
+  compile_targets:
+    - linux
+  software_stacks:
+    - rte
+  release_packages: []
+  boards: []
+  tools: []
+
+case_required_for:
+  - patched_kernel
+  - generated_image
+  - generated_dtb
+  - generated_modules
+
+warnings:
+  - Confirm the task belongs to generic linux-imx before using this project instead of real-time-edge-linux.
+  - Do not infer a flash.bin recipe from the Linux source line.
+  - Shared linux-imx is a baseline; edits and builds belong under support_level/work/<case>/.
+
+evidence:
+  - USAGE.md
+  - ../../../compile_targets/linux/README.md
+  - ../../../software_stacks/rte.md

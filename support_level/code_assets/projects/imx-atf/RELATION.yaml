@@ -1,0 +1,34 @@
+schema_version: 1
+id: imx-atf
+type: git_project
+human_doc: USAGE.md
+owner: compile
+
+summary: ATF / BL31 源码项目，常作为 flash.bin 上游输入。
+
+relations:
+  projects:
+    - imx-optee-os
+    - meta-real-time-edge
+  compile_targets:
+    - flashbin
+  software_stacks:
+    - rte
+  release_packages: []
+  boards: []
+  tools: []
+
+case_required_for:
+  - patched_atf
+  - rebuilt_bl31
+  - generated_bl31
+
+warnings:
+  - RTE or OP-TEE paths may require SPD=opteed, but that decision belongs to the software stack and current case.
+  - RTE ATF patch buckets must be applied only to ATF, not copied wholesale from meta-real-time-edge.
+  - A standalone bl31.bin build does not mean flash.bin is complete.
+
+evidence:
+  - USAGE.md
+  - ../../../software_stacks/rte.md
+  - ../../../compile_targets/flashbin/README.md

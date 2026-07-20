@@ -1,0 +1,33 @@
+schema_version: 1
+id: m_freertos_sdk_package
+type: release_package
+human_doc: README.md
+owner: support
+
+summary: NXP MCUX SDK / FreeRTOS SDK 厂商发布包资产入口。
+
+relations:
+  projects: []
+  compile_targets:
+    - m_freertos_sdk_target
+  software_stacks:
+    - rte
+  release_packages: []
+  boards: []
+  tools: []
+
+case_required_for:
+  - extracted_sdk
+  - patched_sdk_project
+  - generated_mcore_payload
+
+warnings:
+  - This directory stores vendor release packages, not a Git source baseline.
+  - Release package versions cannot be changed with checkout, tag, or branch.
+  - Do not use a nearby SDK version as a silent substitute for a missing target version.
+  - Extract, patch, and build SDK projects under support_level/work/<case>/.
+
+evidence:
+  - README.md
+  - ../../compile_targets/m_freertos_sdk/README.md
+  - ../../software_stacks/rte.md

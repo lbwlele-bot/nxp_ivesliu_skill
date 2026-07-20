@@ -1,0 +1,40 @@
+schema_version: 1
+id: flashbin
+type: compile_target
+human_doc: README.md
+owner: compile
+
+summary: 启动固件 / flash.bin 打包对象，负责确认 boot image 输入集合和最终打包链路。
+
+relations:
+  projects:
+    - imx-mkimage
+    - imx-atf
+    - imx-sm
+    - imx-optee-os
+    - imx-oei
+    - uboot-imx
+    - real-time-edge-uboot
+  compile_targets:
+    - m_freertos_sdk_target
+  software_stacks:
+    - rte
+  release_packages:
+    - scfw
+  boards: []
+  tools: []
+
+case_required_for:
+  - generated_flashbin
+  - patched_inputs
+  - rebuilt_inputs
+
+warnings:
+  - flashbin is a compile target, not a single imx-mkimage make target.
+  - flash_a55 and flash_all are soc.mak recipes, not top-level compile targets.
+  - RTE name alone must not decide flash_a55 or flash_all.
+  - Listed relations are candidate inputs; the actual set must be selected from SoC, board, DDR, software stack, recipe, payload set, and validation goal.
+
+evidence:
+  - README.md
+  - ../../software_stacks/rte.md
