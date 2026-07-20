@@ -127,7 +127,7 @@
 - 当前允许做哪些下一步动作
 - 该下沉到哪个工具文档或板级知识文档
 
-它的核心不是“执行命令”，而是维护板级状态机。
+它的核心不是“执行命令”，而是维护板级动态事实、目标状态和允许动作。
 
 ### 3.3 支撑资源层
 
@@ -150,12 +150,14 @@
   长期保留的代码资产
 - `compile_targets/`
   编译对象入口
+- `software_stacks/`
+  跨项目的软件栈 / 软件线，例如 RTE 与 LF 家族、启动镜像内容差异
+- `release_packages/`
+  不可通过 Git 切版本的厂商 release 包
 - `firmware/`
   DDR firmware、AHAB、固定 blob
 - `linux_document/`
   BSP 官方文档
-- `m_freertos_sdk/`
-  厂商发布的 MCUX SDK / FreeRTOS SDK 包
 - `toolchain/`
   工具链和构建环境输入
 - `tools/`
@@ -173,7 +175,7 @@
 
 ### 4.1 `projects/`
 
-放单个源码项目或源码发布包。
+放可按任务需要切换 ref 的单个 Git 源码项目或 manifest。
 
 它的角色是：
 
@@ -186,20 +188,32 @@
 当前代表性内容：
 
 - 启动固件链：
-  `imx-atf`、`imx-mkimage`、`imx-oei`、`imx-optee-os`、`imx-sm`、`uboot-imx`、`real-time-edge-uboot`、`imx-scfw-porting-kit`
+  `imx-atf`、`imx-mkimage`、`imx-oei`、`imx-optee-os`、`imx-sm`、`uboot-imx`、`real-time-edge-uboot`
 - Linux BSP 链：
   `linux-imx`、`real-time-edge-linux`、`meta-real-time-edge`
 - M 核代码参考链：
-  `mcuxsdk-core`
+  `mcuxsdk-core`、`mcuxsdk-manifests`
 - Android 资产：
   `android`
 
 特别强调：
 
 - `mcuxsdk-core` 只是代码参考基线，不是默认 release 编译来源
-- `M` 核 SDK 编译的首选入口始终是用户提供的 `m_freertos_sdk` 发布包
+- `mcuxsdk-manifests` 是 manifest / workspace 初始化入口，不是默认 release 编译来源
+- `M` 核 SDK 编译的首选 release 包入口在 `release_packages/m_freertos_sdk/`
+- `SCFW` porting kit release 包入口在 `release_packages/scfw/`
 
-### 4.2 `workspaces/`
+### 4.2 `software_stacks/`
+
+放跨项目的软件栈 / 软件线说明。
+
+它的角色是：
+
+- 说明 `RTE 3.3`、`RTE 3.4` 这类软件线对 LF 家族的影响
+- 说明软件线对 `flash.bin` 输入组成、源码 ref 和 release 包需求的影响
+- 在进入 `compile_targets/flashbin/` 前给出软件栈身份判断入口
+
+### 4.3 `workspaces/`
 
 放只有整体协同才有意义的集成工作区。
 
@@ -222,7 +236,7 @@
 - 即使 workspace 里带着 `zephyr/`、`mcuxsdk/`，也不能自动推出“从这里开始编”
 - `hmc-workspace` 和 `zephyr-workspace` 各自承担不同的对象线入口
 
-### 4.3 `compile_targets/`
+### 4.4 `compile_targets/`
 
 放“我要编什么”的对象入口。
 
@@ -237,6 +251,21 @@
 - `zephyr`
 - `a55_rtos`
 
+### 4.5 `release_packages/`
+
+放不可通过 Git checkout 切版本的厂商 release 包。
+
+它的角色是：
+
+- 长期保存用户提供或官方下载的 release 包
+- 明确缺目标版本时要让用户提供或下载官方对应包
+- 防止把 SDK / SCFW 这类 release 包误当成可切 ref 的源码树
+
+当前代表性内容：
+
+- `m_freertos_sdk/`
+- `scfw/`
+
 ---
 
 ## 5. case 与系统生长
@@ -247,7 +276,20 @@
 
 它不是单纯的临时构建目录，而是后续可回放、可交接、可抽取知识的完整过程容器。
 
-每个 case 至少应包含：
+每个 case 推荐最小结构：
+
+- `README.md`
+  目标、输入版本、成功判据、关键步骤、结论、交付项索引
+- `records/`
+  过程记录、步骤笔记、命令线索
+- `logs/`
+  串口日志、命令输出、运行日志、原始抓取
+- `artifacts/`
+  镜像、补丁、脚本、配置、打包结果
+- `state/`
+  跨 `compile -> board-exec` 推进时的 `handoff.yaml` 和 `ledger.yaml`
+
+至少应包含：
 
 - 目标与输入版本
 - 关键执行步骤与结论
@@ -268,8 +310,9 @@
 并保留：
 
 - 来源 case
-- 为什么值得保留
-- 后续可能该吸收到哪一层
+- 证据或原始线索
+- 可复用结论
+- 后续建议吸收到哪一层
 
 这层的目的不是存档噪声，而是把“当前交付”和“系统演化”拆开。
 
@@ -399,7 +442,7 @@ Git 里默认不保留的是：
 
 - 这是一个按 unresolved step 推进的系统，不是固定流水线系统
 - `workspace/` 是轻量控制面，`support_level/` 是重资源与知识面
-- `support` 负责找资源和 owner，`compile` 负责编译对象路由，`board-exec` 负责板状态机
+- `support` 负责找资源和 owner，`compile` 负责编译对象路由，`board-exec` 负责板级动态事实、目标状态和允许动作
 - `code_assets` 负责共享代码基线，`compile_targets` 负责真正的编译入口
 - `work/<case>/` 保留完整过程，`to_absorb/` 保留待归纳的高价值信息
 - Git 只跟踪我们的规则和知识入口，不跟踪下载来的重资产本体

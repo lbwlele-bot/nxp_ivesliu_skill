@@ -284,18 +284,24 @@ Git 默认不跟踪：
 
 - `flashbin` 最容易暴露 owner 分层、输入边界和工具链 split
 - `linux` 最容易暴露源码基线 vs case 派生
-- 板级 bring-up 最容易暴露状态机和强信号优先原则
+- 板级 bring-up 最容易暴露动态事实、允许动作和强信号优先原则
 
 ### 阶段 6：先支持一个真实 case 闭环
 
 在 `support_level/work/` 下落一个真实 case。
 
-case 至少要包含：
+case 推荐最小结构：
 
 - `README.md`
 - `records/`
 - `logs/`
 - `artifacts/`
+- `state/`
+
+其中 `state/` 只在真实 case 需要跨阶段推进时启用，常见实例是：
+
+- `handoff.yaml`
+- `ledger.yaml`
 
 不要等系统成熟后才开始记 case。
 系统本来就是靠 case 长出来的。
@@ -315,8 +321,9 @@ case 至少要包含：
 把新发现先放进去，保留：
 
 - 来源 case
-- 为什么值得保留
-- 未来可能吸收到哪一层
+- 证据或原始线索
+- 可复用结论
+- 未来建议吸收到哪一层
 
 这一步会决定系统后面是不是能长期演化。
 
@@ -353,9 +360,10 @@ support_level/
     projects/
     workspaces/
   compile_targets/
+  software_stacks/
+  release_packages/
   firmware/
   linux_document/
-  m_freertos_sdk/
   toolchain/
   tools/
   work/
@@ -369,7 +377,7 @@ code_assets/
   projects/
     <project>/
       USAGE.md
-      <real-source-tree or package marker>
+      <real-source-tree or manifest>
   workspaces/
     <workspace>/
       README.md
@@ -387,7 +395,34 @@ compile_targets/
   a55_rtos/README.md
 ```
 
-### 6.5 case 子结构
+### 6.5 software_stacks 子结构
+
+```text
+software_stacks/
+  README.md
+  rte.md
+```
+
+`software_stacks/` 是跨项目软件线入口。
+遇到 `RTE`、`Real-Time Edge`、`RTE 3.3`、`RTE 3.4`
+这类会同时改变 ATF、OP-TEE、SMFW、U-Boot、Linux 和
+`flash.bin` 输入集合的需求，先进入这里，
+再下沉到 `compile_targets/` 或具体源码项目。
+
+### 6.6 release_packages 子结构
+
+```text
+release_packages/
+  README.md
+  m_freertos_sdk/
+    README.md
+    <SDK release archives>
+  scfw/
+    README.md
+    <SCFW release packages>
+```
+
+### 6.7 case 子结构
 
 ```text
 work/
@@ -396,6 +431,9 @@ work/
     records/
     logs/
     artifacts/
+    state/
+      handoff.yaml
+      ledger.yaml
 ```
 
 ### 6.6 待归纳区子结构
@@ -409,6 +447,7 @@ to_absorb/
 ```
 
 不需要一开始就设计成复杂数据库。
+每条记录至少写清来源 case、证据或原始线索、可复用结论、建议吸收层。
 
 ---
 
@@ -610,7 +649,7 @@ to_absorb/
 验收标准：
 
 - 执行中能把高价值信息留到 `to_absorb`
-- 后续能从 `to_absorb` 回看来源 case
+- 后续能从 `to_absorb` 回看来源 case、证据和可复用结论
 - 正式 skill/README 的改动有明确来源
 
 ---

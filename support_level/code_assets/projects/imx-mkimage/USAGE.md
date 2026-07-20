@@ -1,277 +1,124 @@
 # imx-mkimage
 
 - 真实源码目录：`./imx-mkimage/`
-- 当前参考分支：`lf-6.12.49_2.2.0`
-- 当前参考版本：`lf-6.12.49-2.2.0`
-- 主要链路：`启动固件`
+- 最近观察分支（使用前重新核对）：`lf-6.12.49_2.2.0`
+- 最近观察版本（使用前重新核对）：`lf-6.12.49-2.2.0`
+- 主要链路：`flash.bin` 打包工具
 
-## 使用规则
+## 角色
 
-1. 先确认任务是不是落到 `flash.bin` 打包或相关镜像拼装
-2. 先核对当前 ref
-3. 只读检查可直接在这里做
-4. 要改、要编、要打包，复制到 `../../work/<case>/` 再做
+`imx-mkimage` 是最终 boot image 打包工具。
 
-## 已吸收：旧 `imx943-flashbin` 第一轮信息
+它不负责决定整条启动固件链需要哪些输入，
+也不负责决定软件栈是 generic Linux 还是 `RTE`。
+这些上层判断先由：
 
-这条旧 skill 说明了 `i.MX943` 的 mkimage 启动镜像链路。
+- `../../../compile_targets/flashbin/README.md`
+- `../../../software_stacks/rte.md`
 
-它统一覆盖：
+完成。
 
-- 通用 Linux `flash_a55`
-- `RTE 3.3` `flash_a55`
-- `RTE 3.4` `flash_a55`
-- `RTE 3.4` `flash_all`
+本页只负责：当上层已经决定要用 `imx-mkimage` 打包时，
+这个项目本身怎么核对、准备输入、运行 `soc.mak` recipe、交出产物。
 
-### 这条链依赖哪些模块
+## 使用前提
 
-最小依赖模块：
+进入本页前，必须已经钉死：
 
-- `imx-mkimage`
-- `imx-atf`
-- `uboot-imx` 或 `real-time-edge-uboot`
-- `imx-oei`
-- `imx-sm`
-- `imx-optee-os`（仅 `RTE` / `OP-TEE` 路径需要）
+- 目标 SoC，例如 `iMX94` / `iMX95`
+- 板型、DDR 类型、必要的 SoC revision
+- 软件栈和版本家族
+- 最终 recipe，例如 `flash_a55` / `flash_all`
+- 是否需要 `OEI=YES`
+- 是否需要 `OP-TEE` 输入
+- 是否需要 M 核 payload 输入
+- 固定 firmware blob 来源
+- 各上游输入件的来源和版本
 
-### 分支模型
+如果这些还没确定，先回到 `compile_targets/flashbin/README.md`。
+如果任务属于 `RTE`，先读 `software_stacks/rte.md`。
 
-- 通用 Linux + `flash_a55`
-- `RTE 3.3` + `flash_a55`
-- `RTE 3.4` + `flash_a55`
-- `RTE 3.4` + `flash_all`
+## 共享源码规则
 
-当前不把 `RTE 3.3 flash_all` 当成已有可直接复用的对称路径。
+1. 先用 `git status --short --branch` 和 `git describe --tags --always --dirty` 核对当前 ref
+2. 只读检查可直接在共享源码目录做
+3. 要改、要打包、要生成输出，复制到 `../../../work/<case>/` 再做
+4. 不要把旧 `work/` 里的 `flash.bin` 直接当作当前任务产物，除非它的来源、版本、配置都已经被当前 case 重新确认
 
-### 通用命令形态
+## 打包输入契约
 
-`flash_a55`：
+`imx-mkimage` 消费的是已经准备好的上游输入件。
+典型输入包括：
+
+- `bl31.bin`
+- `u-boot.bin`
+- `u-boot-spl.bin`
+- `oei-m33-ddr.bin`
+- `m33_image.bin`
+- `tee.bin`，仅当所选软件栈需要 `OP-TEE`
+- M 核 payload，只有所选 recipe / 软件栈 / case 需要时才带入
+- DDR / ELE / AHAB 等固定 firmware blob
+
+输入集合由上层 `flashbin` 编排和软件栈决定。
+不要只因为某个文件在目录里存在，就默认它应该进入本次 `flash.bin`。
+
+## 常见命令形态
+
+`i.MX943` 在 `imx-mkimage` 中通常使用 `SOC=iMX94`：
 
 ```bash
+cd /home/ives/桌面/NXP_v2/support_level/work/<case>/imx-mkimage
 make SOC=iMX94 OEI=YES LPDDR_TYPE=<lpddr4|lpddr5> flash_a55
 ```
 
-`RTE 3.4 flash_all`：
+需要完整 payload 集合时，recipe 可能是：
 
 ```bash
+cd /home/ives/桌面/NXP_v2/support_level/work/<case>/imx-mkimage
 make SOC=iMX94 OEI=YES LPDDR_TYPE=<lpddr4|lpddr5> flash_all
 ```
 
-### 共享规则
-
-- 通用 Linux 通常不需要 `SPD=opteed`
-- `RTE` 路径要求 `OP-TEE`
-- `RTE` 路径里 `tee-raw.bin` 要按 `tee.bin` 参与打包
-- `flash_a55` / `flash_all` 都是原始启动镜像，不是 FAT 运行时文件
-
-### 最小产物边界
-
-- `flash.bin`
-- `u-boot.bin`
-- `u-boot-spl.bin`
-- `bl31.bin`
-- `oei-m33-ddr.bin`
-- `m33_image.bin`
-- `tee.bin`（仅所选栈需要 `OP-TEE` 时）
-- `m70_image.bin`
-- `m71_image.bin`
-- `m33s_image.bin`
-  仅验证过的 `RTE 3.4 flash_all` 路径要求
-
-### 当前版本缺口
-
-这里要特别注意：
-
-- 当前这份 `imx-mkimage` 基线是 `lf-6.12.49-2.2.0`
-- 但旧 `imx943-flashbin` 里对 `RTE 3.4` 的期望家族是 `lf-6.18.2-1.0.0`
-
-所以目前只能说：
-
-- 旧 skill 的结构和命令形态已经开始吸收
-- 但 `RTE 3.4` 这条链路还没有完成到“本目录现成可直接照抄执行”的程度
-
-后续要继续对齐：
-
-- 这份 `imx-mkimage` 是否要补出 `lf-6.18.2` 基线
-- 还是从现有已复制资产里拆出对应版本并转正
-
-## 已吸收：旧 `imx95-rte33-build-flashbin` 第一轮信息
-
-这条旧 skill 对 `i.MX95 RTE 3.3 flash.bin` 很关键的点，不是“又来一条新的打包命令”，
-而是它把几个容易被混淆的归属事实钉死了。
-
-### 这条链依赖哪些模块
-
-最小依赖模块：
-
-- `imx-mkimage`
-- `real-time-edge-uboot`
-- `imx-atf`
-- `imx-optee-os`
-- `imx-oei`
-- `imx-sm`
-- `M7` payload 基线
-
-### 这条链路的最终打包目标
-
-验证过的最终 packaging 目标是：
+`i.MX95` 这类 SoC 如果 `soc.mak` recipe 要求 revision，
+必须显式传入，不能猜：
 
 ```bash
-make SOC=iMX95 REV=B0 OEI=YES LPDDR_TYPE=lpddr5 flash_all
+cd /home/ives/桌面/NXP_v2/support_level/work/<case>/imx-mkimage
+make SOC=iMX95 REV=<rev> OEI=YES LPDDR_TYPE=<lpddr4|lpddr5> <recipe>
 ```
 
-这里最重要的是：
+这些只是命令形态。
+具体 recipe 和参数必须以当前 SoC 的 `soc.mak`、软件栈和 case 目标为准。
 
-- `REV` 是会影响输出结果的
-- 不能猜
-- 这条已验证链路是 `B0`
-- `flash_all` 不能被静默替换成 `flash_a55`
+## 输出与交接
 
-### 这条链路里真正属于 `RTE` 的差异项
+核心输出通常是：
 
-真正 `RTE` 特有的变化是：
-
-- `ATF SPD=opteed`
-- `OP-TEE` 必选
-- `tee-raw.bin -> tee.bin`
-- `ATF` patch 从 `meta-real-time-edge` 同步
-- `SMFW` patch 从 `meta-real-time-edge` 同步
-- `SMFW` 使用 `mx95rte`
-
-不要把整条启动固件链都误理解成“全部是 case 特有新逻辑”。
-
-### 验收 / 最终产物规则
-
-对这条 `i.MX95 RTE 3.3` 链路，
-除了 `flash.bin` 存在以外，还要继续确认：
-
-- `tee.bin` 的来源确实是 `tee-raw.bin`
-- `oei-m33-ddr.bin` 存在
-- `m33_image.bin` 存在
-- `m7_image.bin` 存在
-- `OEI` 身份确实是 `MIMX95(B0)`
-
-如果当前 workspace 里出现多个 `flash.bin`，
-优先以 当前脚本 或当前 case 里明确声明的 最终输出为准，
-不要只按“哪个路径先搜到”来选。
-
-如果 `parse_container` 没直接打印字面量 `M7`，
-当前这条链路可接受已验证的 `M7` TCM load address：
-`0x303C0000`
-作为更强的证据面。
-
-### 与支撑层资产的关系
-
-这条链路继续落地时，除了看源码项目，
-还要回头读：
-
-- `../../toolchain/README.md`
-- `../../firmware/README.md`
-
-原因不是“再看一遍目录”，
-而是先把：
-
-- A-core / M-core 工具链归属
-- 固定固件 blob 根目录
-
-说清楚，再做打包。
-
-### 当前版本缺口
-
-这里和前面的 `i.MX943` 情况不同：
-
-- 旧 skill 里 `imx95 RTE 3.3` 参考的是 `lf-6.12.34-2.1.0`
-- 本地当前 `imx-mkimage` 基线是 `lf-6.12.49-2.2.0`
-
-所以这里当前吸收的是：
-
-- 归属和差异项结构
-- 关键命令形态
-- 不能误判的构建身份
-- 验收 / 最终产物规则
-
-还没有把这条链路变成“当前目录现成同版本操作手册”。
-
-## 已吸收：旧 `imx943-上板写入` / `imx943-uuu-ops` 第一轮信息
-
-对 `i.MX943`，先要把产物类别分清，而不是先想传输命令。
-
-### 产物类别
-
-下面这些属于：
-
-- `原始启动镜像`
-
-例如：
-
-- `flash.bin`
-- `imx-boot-...-flash_a55`
-- `imx-boot-...-flash_all`
-
-它们都是 `imx-mkimage` boot image。
-应走原始启动镜像路径，不应误当成 FAT 运行时文件。
-
-相对地，下面这些才属于：
-
-- `FAT 运行时文件`
-
-例如：
-
-- `Image`
-- `dtb`
-- `.ko`
-- staged `A55` `.bin`
-
-### 传输边界
-
-对这类 `原始启动镜像`，
-`uuu` 常见只是在做 传输：
-
-```bash
-sudo -n /home/ives/桌面/NXP/tools/uuu_1.5.243/uuu -b sd <flash.bin>
+```text
+flash.bin
 ```
 
-而不是在证明运行态已经完成。
+`flash.bin` 属于原始 boot image。
+它可以交给 `compile_targets/flashbin` 做产物归档和 handoff，
+再由 `board-exec` 决定烧写、下载态、串口和运行态验证。
 
-高风险误区：
+`imx-mkimage` 不负责证明：
 
-- `imx-mkimage` boot image 不要重试成 `fat_write`
-- `uuu` 成功返回，不等于 Linux / 登录 / 运行态验证已完成
+- `uuu` 传输是否成功
+- 板子是否已经进入 `FB`
+- U-Boot 是否已经运行
+- Linux 是否已经启动
+- M 核运行态是否成立
 
-## 已吸收：旧 `imx8dxl-板控` 第一轮信息
+这些属于 `board-exec`、`tools/uuu` 或具体 `board_knowledge/<board>/`。
 
-对 `i.MX8DXL`，`flash.bin` 还带一个非常强的阶段语义。
+## 不该在这里判断的事
 
-### 第一阶段 基线
+- 不在这里决定 `RTE` 是否需要 `OP-TEE`
+- 不在这里决定 `ATF` 是否要 `SPD=opteed`
+- 不在这里决定 `SMFW` / `ATF` 是否要同步 `meta-real-time-edge` patch
+- 不在这里决定 U-Boot 应该走 `uboot-imx` 还是 `real-time-edge-uboot`
+- 不在这里把 `flash_a55` / `flash_all` 当成上层 compile target
+- 不在这里解释 `SDPS -> FB`、second-stage `uuu` 或 FAT 运行时文件写入
 
-从 `SDPS` 开始的第一条：
-
-```bash
-uuu -b sd <基线_flash.bin>
-```
-
-它的重要意义通常是：
-
-- 把板子从 `SDPS` 带到当前 `FB`
-
-### 第二阶段中继
-
-只有 第一阶段 已经成功把板子带到 `FB`，
-第二阶段如：
-
-```bash
-uuu -b sd <flash_m4_flash.bin>
-```
-
-才成立。
-
-高风险误区：
-
-- `flash_m4` 不是 第一阶段 bring-up image
-- 它不能直接替代 基线 `flash.bin` 从 `SDPS` 开始单独使用
-
-## 待补全
-
-- 不同 SoC 的打包入口
-- 不同版本下的输入件约束
-- 相关旧 skill 的吸收结果
+这些分别属于 `software_stacks/`、`compile_targets/flashbin/`、
+`tools/uuu/` 和 `board_knowledge/`。

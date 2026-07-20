@@ -98,7 +98,7 @@
 - `compile`
   定位编译对象和最小依赖集合
 - `board-exec`
-  维护板级状态机，推进真实板状态
+  维护板级动态事实、目标状态和允许动作，推进真实板状态
 
 ## support_level/ 是什么
 
@@ -115,12 +115,14 @@
   共享代码资产入口
 - `compile_targets/`
   编译对象入口
+- `software_stacks/`
+  跨项目的软件栈 / 软件线，例如 RTE 与 LF 家族、启动镜像内容差异
+- `release_packages/`
+  不可通过 Git 切版本的厂商 release 包
 - `firmware/`
   DDR firmware、AHAB、固定 blob
 - `linux_document/`
   Linux BSP 官方文档
-- `m_freertos_sdk/`
-  用户提供或本地已有的 SDK 发布包入口
 - `toolchain/`
   交叉编译工具链和环境输入
 - `tools/`
@@ -142,14 +144,14 @@
 `support_level/code_assets/` 当前分成两类：
 
 - `projects/`
-  单个源码项目或源码发布包
+  可按任务需要切 ref 的单个 Git 源码项目或 manifest
 - `workspaces/`
   多仓协同才有意义的集成工作区
 
 当前 `projects/` 的主要角色可以粗分为：
 
 - 启动固件链：
-  `imx-atf`、`imx-mkimage`、`imx-oei`、`imx-optee-os`、`imx-sm`、`uboot-imx`、`real-time-edge-uboot`、`imx-scfw-porting-kit`
+  `imx-atf`、`imx-mkimage`、`imx-oei`、`imx-optee-os`、`imx-sm`、`uboot-imx`、`real-time-edge-uboot`
 - Linux BSP 链：
   `linux-imx`、`real-time-edge-linux`、`meta-real-time-edge`
 - M 核代码参考链：
@@ -167,10 +169,13 @@
 特别强调两点：
 
 1. `mcuxsdk-core` 只是代码参考，不是默认 release 编译入口  
-   `M` 核 SDK 编译的首选入口始终是 `m_freertos_sdk` 发布包。
+   `M` 核 SDK 编译的首选 release 包入口始终是 `release_packages/m_freertos_sdk`。
 
 2. 共享 workspace 不是 case 工作区  
    它们用来理解协同关系、核对版本和确认入口，不应默认直接承载 case 产物。
+
+不可通过 Git 切版本的厂商 release 包，例如 `m_freertos_sdk` 和 `SCFW`，
+放在 `support_level/release_packages/`。
 
 ## compile_targets/ 怎么理解
 
@@ -207,7 +212,20 @@
 
 - `support_level/work/<日期-芯片-问题>/`
 
-每个 case 目录至少应保留：
+每个 case 目录推荐最小结构：
+
+- `README.md`
+  目标、输入版本、成功判据、关键步骤、结论、交付项索引
+- `records/`
+  过程记录、步骤笔记、命令线索
+- `logs/`
+  串口日志、命令输出、运行日志、原始抓取
+- `artifacts/`
+  镜像、补丁、脚本、配置、打包结果
+- `state/`
+  跨 `compile -> board-exec` 推进时的 `handoff.yaml` 和 `ledger.yaml`
+
+至少应保留：
 
 - 目标与输入版本
 - 关键步骤与中间结论
@@ -225,7 +243,12 @@
 
 - `support_level/to_absorb/`
 
-并保留它来自哪个 case、为什么值得吸收、后续可能该归到哪一层。
+并按最小模板保留：
+
+- 来源 case
+- 证据或原始线索
+- 可复用结论
+- 后续建议吸收到哪一层
 
 这样当前交付和长期系统演化就不会混在一起。
 
@@ -263,7 +286,7 @@
 
 `board-exec` 的核心是维护：
 
-- 当前板状态
+- 当前板级动态事实
 - 目标板状态
 - 允许的下一步动作
 

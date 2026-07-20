@@ -2,18 +2,21 @@
 
 这里放的是 `NXP MCUX SDK / FreeRTOS SDK` 发布压缩包资产。
 
-它和 `code_assets/projects/` / `code_assets/workspaces/` 不一样：
+它属于 `release_packages/`，和 `code_assets/projects/` /
+`code_assets/workspaces/` 不一样：
 
 - 这里默认是厂商发布包
 - 不是普通 Git clone 基线
+- 不能通过 checkout / tag / branch 切换版本
 - 不应被当成“缺了就自己去网上拉”的源码树
 
 使用规则：
 
-1. 先看本地 `m_freertos_sdk/` 里有没有目标板、目标版本的 SDK 压缩包
-2. 如果没有，不要自行去网上下载
-3. 先找用户要，或者让用户明确提供下载好的发布包
-4. 解压、修改、编译，放到当前 `work/<case>/` 下做，不要在这里原地改
+1. 先确认目标板、目标 SDK 版本和当前软件栈要求
+2. 再看本地是否已有对应 SDK 压缩包
+3. 如果没有，不要自行拿其他版本代替
+4. 先找用户要，或者让用户明确提供下载好的官方发布包
+5. 解压、修改、编译，放到当前 `work/<case>/` 下做，不要在这里原地改
 
 当前目录适合长期保留的内容：
 
@@ -31,7 +34,8 @@
 
 这里虽然主要放的是 SDK 发布压缩包资产，
 但和 SDK 编译直接相关、又不该写进某块板 `board_knowledge` 的规则，
-也可以先在这里收编译边界，再由具体源码项目手册继续细化。
+也可以先在这里收编译边界，再由 `compile_targets/m_freertos_sdk/`
+继续细化。
 
 ### `i.MX8DXL` `M4` 构建边界
 

@@ -44,7 +44,8 @@ support_level/*
 !support_level/compile_targets/
 !support_level/firmware/
 !support_level/linux_document/
-!support_level/m_freertos_sdk/
+!support_level/release_packages/
+!support_level/software_stacks/
 !support_level/to_absorb/
 !support_level/toolchain/
 !support_level/tools/
@@ -75,8 +76,18 @@ support_level/firmware/*
 support_level/linux_document/*
 !support_level/linux_document/README.md
 
-support_level/m_freertos_sdk/*
-!support_level/m_freertos_sdk/README.md
+support_level/release_packages/*
+!support_level/release_packages/README.md
+!support_level/release_packages/m_freertos_sdk/
+!support_level/release_packages/scfw/
+support_level/release_packages/m_freertos_sdk/*
+support_level/release_packages/scfw/*
+!support_level/release_packages/m_freertos_sdk/README.md
+!support_level/release_packages/scfw/README.md
+
+support_level/software_stacks/*
+!support_level/software_stacks/README.md
+!support_level/software_stacks/rte.md
 
 support_level/to_absorb/*
 !support_level/to_absorb/README.md
@@ -111,10 +122,10 @@ support_level/code_assets/projects/*
 !support_level/code_assets/projects/imx-mkimage/
 !support_level/code_assets/projects/imx-oei/
 !support_level/code_assets/projects/imx-optee-os/
-!support_level/code_assets/projects/imx-scfw-porting-kit/
 !support_level/code_assets/projects/imx-sm/
 !support_level/code_assets/projects/linux-imx/
 !support_level/code_assets/projects/mcuxsdk-core/
+!support_level/code_assets/projects/mcuxsdk-manifests/
 !support_level/code_assets/projects/meta-real-time-edge/
 !support_level/code_assets/projects/real-time-edge-linux/
 !support_level/code_assets/projects/real-time-edge-uboot/
@@ -125,10 +136,10 @@ support_level/code_assets/projects/imx-atf/*
 support_level/code_assets/projects/imx-mkimage/*
 support_level/code_assets/projects/imx-oei/*
 support_level/code_assets/projects/imx-optee-os/*
-support_level/code_assets/projects/imx-scfw-porting-kit/*
 support_level/code_assets/projects/imx-sm/*
 support_level/code_assets/projects/linux-imx/*
 support_level/code_assets/projects/mcuxsdk-core/*
+support_level/code_assets/projects/mcuxsdk-manifests/*
 support_level/code_assets/projects/meta-real-time-edge/*
 support_level/code_assets/projects/real-time-edge-linux/*
 support_level/code_assets/projects/real-time-edge-uboot/*
@@ -137,10 +148,10 @@ support_level/code_assets/projects/uboot-imx/*
 !support_level/code_assets/projects/imx-mkimage/USAGE.md
 !support_level/code_assets/projects/imx-oei/USAGE.md
 !support_level/code_assets/projects/imx-optee-os/USAGE.md
-!support_level/code_assets/projects/imx-scfw-porting-kit/USAGE.md
 !support_level/code_assets/projects/imx-sm/USAGE.md
 !support_level/code_assets/projects/linux-imx/USAGE.md
 !support_level/code_assets/projects/mcuxsdk-core/USAGE.md
+!support_level/code_assets/projects/mcuxsdk-manifests/USAGE.md
 !support_level/code_assets/projects/meta-real-time-edge/USAGE.md
 !support_level/code_assets/projects/real-time-edge-linux/USAGE.md
 !support_level/code_assets/projects/real-time-edge-uboot/USAGE.md
