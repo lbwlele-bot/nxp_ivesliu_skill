@@ -1,16 +1,33 @@
 schema_version: 2
 board: imx943evk19a0
-profile_status: partial
+profile_status: verified
 adapter:
-  name: FTDI-style multi-port UART
+  name: FT4232H Quad HS USB-UART/FIFO IC
+  usb_id: "0403:6011"
+  interface_count: 4
 baudrate: 115200
 format: 8N1
 prefer_by_id: true
 ports:
+  first-com:
+    order: 1
+    interface: if00
+    tty: /dev/ttyUSB0
+    description: First enumerated COM port; no default runtime log role assigned
+    default_capture: false
+    required: false
+    status: verified
+  second-com:
+    order: 2
+    interface: if01
+    tty: /dev/ttyUSB1
+    description: Second enumerated COM port; used by BCU control and no default runtime log role assigned
+    default_capture: false
+    required: false
+    status: verified
   a-core:
     order: 3
     interface: if02
-    by_id: usb-FTDI_Quad_RS232-HS-if02-port0
     tty: /dev/ttyUSB2
     description: Default U-Boot and Linux console
     log_sources:
@@ -22,7 +39,6 @@ ports:
   sm:
     order: 4
     interface: if03
-    by_id: usb-FTDI_Quad_RS232-HS-if03-port0
     tty: /dev/ttyUSB3
     description: SM or monitor console
     log_sources:
@@ -32,6 +48,9 @@ ports:
     required: true
     status: verified
 notes:
-  - The complete adapter interface count and the roles of if00 and if01 are not yet verified.
+  - The on-board FT4232H exposes four fixed interfaces in if00-if03 order.
+  - The attached adapter has a per-board serial number, so runtime resolution uses usb_id plus interface instead of a hard-coded by-id basename.
+  - External application M-core UART adapters were not connected during this validation and are not part of this four-interface profile.
+  - BCU hardware access can leave if01 detached from ftdi_sio; run serial-console recover after BCU exits.
   - ttyUSB3 is not the default Linux shell.
   - Prefer the a-core role for U-Boot stop and Linux login unless live evidence overrides it.

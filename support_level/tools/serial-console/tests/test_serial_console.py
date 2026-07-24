@@ -132,6 +132,24 @@ class SerialConsoleTests(unittest.TestCase):
             ["a-core", "m33"],
         )
 
+    def test_verified_imx943_profile_maps_onboard_interfaces(self) -> None:
+        profile = serial_console.load_profile("imx943evk19a0")
+        groups = serial_console.group_serial_interfaces(four_port_records())
+
+        group, error = serial_console.select_adapter_group(groups, profile, None)
+        probe = serial_console.probe_profile(profile, group)
+
+        self.assertEqual(error, "")
+        self.assertEqual(probe["errors"], [])
+        self.assertEqual(
+            [port["role"] for port in probe["ports"]],
+            ["first-com", "second-com", "a-core", "sm"],
+        )
+        self.assertEqual(
+            serial_console.default_capture_roles(profile),
+            ["a-core", "sm"],
+        )
+
     def test_unclassified_adapter_uses_ordered_port_names(self) -> None:
         group = serial_console.group_serial_interfaces(four_port_records())[0]
 

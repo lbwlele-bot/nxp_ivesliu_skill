@@ -25,6 +25,33 @@
   3. 已验证串口证据
 - 不要因为串口暂时安静，就覆盖掉更强的 `bcu` / `uuu` 结论
 
+### 当前 A0 实物复测
+
+2026-07-24 当前连接板的 FTDI EEPROM 明确报告：
+
+- `NXP i.MX943 19x19 EVK Board Rev A0`
+- `i.MX943 Rev A0`
+- FTDI serial：`BE38C4`
+
+使用 `imx943evk19b1` 会被 BCU 以 EEPROM revision mismatch 拒绝，因此
+不能只按 PCB 颜色判断 A0/B1，也不能在 reset 动作上盲试两个 profile。
+
+当前实物即使保持 SW7-1=ON 并重新上电，BCU 的 `remote_en`、`mode_dir`
+和 `reset` GPIO 访问仍返回 `0xffffffff`，`bcu reset` 明确失败。
+所以历史上验证过的 BCU reset 不能覆盖当前现场：
+
+- BCU 仍可读 FTDI EEPROM并识别 A0
+- 当前不能把 BCU reset 当成可用恢复动作
+- 在 SW7/BCU GPIO 路径修复前，启动捕获使用物理重新上电
+- 不通过写 EEPROM 伪装成 B1
+
+BCU 硬件访问同样会接管 FT4232H `if01` 并留下未绑定状态。恢复：
+
+```bash
+sudo -n ../../tools/serial-console/serial-console recover --board imx943evk19a0
+../../tools/serial-console/serial-console probe --board imx943evk19a0
+```
+
 ## 已验证的基础进入方式
 
 - 默认当前起始状态可以先假设：
@@ -49,6 +76,25 @@
   `reset sd -board=imx943evk19a0`
 - 这条路径可作为从任意混乱状态回到可控复位基线的默认恢复动作
   但仍要以当前 现场证据 为准
+- 当前 A0 实物复测已经否定其现场前提：GPIO 路径失败时不得继续使用本条，
+  应退回物理重新上电并保留 BCU 错误日志
+
+## 当前串口映射
+
+主板 FT4232H 固定枚举四个 interface：
+
+- `if00`：无默认运行日志 role
+- `if01`：BCU 板控通道，无默认运行日志 role
+- `if02`：A-core，SPL/BL31/U-Boot/Linux
+- `if03`：SMFW / SM Debug Monitor
+
+2026-07-24 物理重新上电捕获结果：
+
+- A-core：73658 bytes，无重连，Linux 6.12.34-rt11 到 login
+- SM：103 bytes，无重连，看到 `Hello from SM` 和 `SM Debug Monitor`
+
+当前没有连接外部 application M-core UART 转接板；这些 UART 不属于上述
+主板四口 profile，也不作为本轮验收失败项。
 
 ## 已验证的异构核约束
 
