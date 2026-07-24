@@ -53,5 +53,5 @@ ports:
     status: verified
 notes:
   - The adapter exposes four COM interfaces in fixed if00-if03 order.
-  - BCU reset can leave if01 physically present but detached from ftdi_sio.
+  - BCU hardware access through FT4232H channel 1, including get_boot_mode and reset, can leave if01 detached from ftdi_sio.
   - Capture a-core and m33 during BCU reset; recover if01 after BCU exits.

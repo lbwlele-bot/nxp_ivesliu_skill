@@ -58,6 +58,9 @@ sudo -n ./bcu set_gpio <GPIO_NAME> 0 -board=<board>
   reset
 - 部分板卡的 BCU 与串口共用 FTDI；BCU 退出后要做串口 fresh probe。
   如果物理 interface 存在但未绑定驱动，使用 `serial-console recover`
+- 影响来自实际 FTDI 板控访问，不只来自 reset：当前 BCU 使用
+  `libftdi1` 的 FT4232H channel 1，已验证 `get_boot_mode` 和 `reset`
+  都会接管 `if01`；不访问板卡的 `version` 不会影响 driver binding
 - `bcu` 文档这里只写工具稳定边界；具体到哪块板怎么用，要去对应板级知识
 - `bcu` 的一个重要价值是把板子拉回可控态，但是否把它当默认恢复动作，取决于具体板型的已验证工作流
 

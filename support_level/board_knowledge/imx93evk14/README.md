@@ -108,8 +108,10 @@
 sudo -n ../../tools/bcu/bcu reset -board=imx93evk14
 ```
 
-当前实测 BCU reset 连续 3/3 次在退出后留下未绑定的 `if01`。板子和
-A-core/M33 日志口不因此失效，但 fresh probe 会只看到三个 COM。恢复：
+当前实测 BCU reset 连续 3/3 次在退出后留下未绑定的 `if01`。
+只读 `get_boot_mode` 也会产生同样结果，而不访问板卡的 `bcu version`
+不会影响绑定。板子和 A-core/M33 日志口不因此失效，但 fresh probe 会
+只看到三个 COM。恢复：
 
 ```bash
 sudo -n ../../tools/serial-console/serial-console recover --board imx93evk14
@@ -118,6 +120,12 @@ sudo -n ../../tools/serial-console/serial-console recover --board imx93evk14
 
 恢复后必须重新看到 `if00-if03` 四个 interface。不要写 EEPROM 来规避该
 主机驱动绑定问题。
+
+BCU 二进制动态链接 `libftdi1` / `libusb`，并把板控 I2C 路径固定到
+`ft4232h_i2c{channel=1...}`。USB ioctl 跟踪确认硬件访问会在 FT4232H
+设备上执行 `GETDRIVER`、driver disconnect 和 `CLAIMINTERFACE`，退出时
+没有恢复 `if01` 的 `ftdi_sio` 绑定。因此这里的根因是 BCU 接管板控
+channel 后的主机驱动清理缺口，不是板级 reset 导致整个 FT4232H 消失。
 
 ## 交接边界
 
