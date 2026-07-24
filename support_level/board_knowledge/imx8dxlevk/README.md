@@ -5,8 +5,7 @@
 - 板型：`i.MX8DXL EVK`
 - 当前主机：Ubuntu 本机
 - 来源：旧 `imx8` 入口资料、`imx8dxl` 板控经验、本地 `i.MX8` 故障记录中的已验证结论
-- manual-reset-only 只适用于 i.MX8DXL，不得传播到 i.MX93、i.MX943
-  或其它板型。
+- reset 方式按本次是否要求 M4 早期日志区分，不得传播到其它板型。
 
 ## 默认识别
 
@@ -33,19 +32,21 @@
   已验证 `bcu` 可以控制 boot mode。
 - `bcu` 需要使用 `sudo -n`；
   普通用户执行 `get_boot_mode` 可能报 `no ack received`。
-- 当前允许的 BCU 命令只用于切 boot mode：
+- 当前已验证的 BCU 命令包括 boot mode 控制：
   - `sudo -n bcu init usb -board=imx8dxlevk`
   - `sudo -n bcu init sd -board=imx8dxlevk`
+- 普通 reset 在明确排除 M4 日志时可用：
+  `sudo -n bcu reset -board=imx8dxlevk`
 - BCU 与 DXL M4 console 共用 FT4232H `if01`；具体恢复和捕获顺序由
   `serial-console` 的 DXL profile 维护。
-- i.MX8DXL 当前流程禁止使用 `bcu reset usb`、`bcu reset sd`
-  或其它 `bcu reset` 变体。
-- reset owner 固定为用户：
-  BCU 完成 boot-mode 操作并退出后，恢复串口、准备三路捕获，再由用户
-  手动按板上 RESET。
+- 如果需要 M4 早期日志，reset owner 固定为用户：
+  BCU 完成 boot-mode 操作并退出后，恢复串口、准备三路捕获，再由用户手动
+  按板上 RESET。
+- 如果明确不需要 M4 日志，只验收 A-core 和 SCFW，当前 B0 LPDDR4 实物
+  已验证可以在 `a-core/if02`、`scfw/if03` 两路 READY 后执行 BCU reset。
 - 原因不是 DXL 板本身的 USB 串口不稳定。当前 BCU 固定接管 FT4232H
-  channel 1，而该 interface 恰好承载 DXL M4 日志；使用 BCU reset 会让
-  关键早期证据无法可靠捕获。
+  channel 1，而该 interface 恰好承载 DXL M4 日志；BCU reset 影响的是
+  M4 早期日志可信度，不等于 A-core/SCFW reset 路径不可用。
 - 这块板的 EEPROM 当前为空，`bcu` 会提示可写 EEPROM；
   `bcu eeprom -w -board=imx8dxlevk` 属于长期配置动作，需用户明确同意。
 - 对旧板或未复测板，仍不要自动套用本条 BCU 结论。
@@ -55,7 +56,7 @@
   2. `uuu -lsusb`
   3. 已验证的 UART 现场证据
 - 不要把 `bcu` 成功返回单独当作运行态证明；
-  手动 reset 后仍需用 USB 枚举和串口 fresh probe 判断当前阶段。
+  reset 后仍需用 USB 枚举和串口 fresh probe 判断当前阶段。
 
 ## M 核加载路径偏好
 
@@ -143,24 +144,31 @@ first-stage A1 regression flash.bin: SDPS -> FB
 - 如果板子已经在 `FB`，重跑同样命令不能重新证明 `SDPS -> FB`
 - UUU 写入成功不能直接证明最终 SD boot 运行态成立
 
-## 手动启动交接
+## 启动交接
 
 完成当前 case 要求的 boot image 和 FAT 文件写入后：
 
-- BCU 只切到 SD boot mode
-- BCU 退出后按 DXL serial profile 恢复 `if01` 并确认四路完整
-- 准备 M4、A-core、SCFW 三路捕获
-- 用户手动按板上 RESET
-- 再用 USB 枚举和三路运行日志验证实际启动结果
+- 需要 M4 日志：
+  BCU 切到 SD mode，退出后恢复 `if01` 并确认四路完整，准备三路捕获，
+  再由用户手动 RESET
+- 不需要 M4 日志：
+  明确只捕获 A-core 和 SCFW，两路 READY 后可执行当前实物已验证的 BCU
+  reset
+- 两种路径都必须在动作后重新检查 USB、串口和实际启动阶段
 
 ## 当前 B0 LPDDR4 EVK 复测记录
 
 2026-07-22 当前新板复测：
 
 - `bcu init usb` 后可读回 `get_boot_mode: usb, hex value: 0x1`
-- 历史测试曾证明 `bcu reset usb/sd` 能改变板状态，但该结论只保留为
-  工具能力证据；自 2026-07-24 起不再作为 i.MX8DXL 操作 recipe。
-- 当前 recipe 为 `bcu init usb/sd` 只切模式，随后用户手动按 RESET。
+- 2026-07-24 在 BOOT SWITCH 模式下执行普通
+  `sudo -n bcu reset -board=imx8dxlevk` 连续 3/3 次成功
+- 每轮预先只捕获 `a-core/if02` 和 `scfw/if03`：
+  A-core 均看到 SPL 和 Linux，SCFW 均看到 banner，两路无 reconnect
+- 首轮 Linux 到 login；每轮结束后 fresh probe 均看到 `if00-if03`
+- 这组试验明确不验收 M4 日志，因此不能用于证明 `m4/if01` 早期输出完整
+- 带 `usb/sd` 参数并改变 boot mode 的 reset 不由这组三次普通 reset
+  自动证明，使用时仍需单独核对目标模式
 - 三路串口的映射和现场输出证据已经迁入 DXL serial profile。
 
 SCFW 编译与第 4 个 COM：
@@ -177,6 +185,7 @@ SCFW 编译与第 4 个 COM：
 本轮原始记录在：
 
 - `../../work/2026-07-22-imx8dxl-b0-lpddr4-bcu-bootmode/`
+- `../../work/2026-07-24-imx8dxl-bcu-reset-serial-scope/`
 
 ## 已验证的资产优先级
 

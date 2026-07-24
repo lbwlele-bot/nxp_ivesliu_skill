@@ -312,9 +312,11 @@ port3
 - `serial.yaml` 只记录已验证映射；未确认接口保持未命名
 - `partial` profile 只使用已确认 role，不能补猜剩余接口
 - reset 方式不由串口工具决定
-- i.MX8DXL 如使用 BCU 切 boot mode，必须先让 BCU 退出，再恢复 `if01`；
-  fresh probe 完整后启动捕获，看到 `ALL PORTS READY` 才由用户手动按 RESET
-- i.MX93、i.MX943 等板不能继承 i.MX8DXL 的 reset 特例
+- i.MX8DXL 需要 M4 早期日志时，BCU 退出后先恢复 `if01`，三路 READY 后
+  由用户手动按 RESET
+- i.MX8DXL 不需要 M4 日志时，可显式只捕获 `a-core` 和 `scfw`，两路
+  READY 后使用已验证的 BCU reset
+- 其它板不能直接继承 DXL 这个按观测 role 区分的 reset 规则
 - 串口输出或静默都不能单独证明板状态，仍需 `board-exec` 结合 USB 和板控证据判断
 
 ## 当前 profile

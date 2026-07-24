@@ -95,7 +95,7 @@
 
 2026-07-24 在当前 i.MX93 14x14 LPDDR4x EVK 上重新验证：
 
-这块板允许 BCU reset，不继承 i.MX8DXL 的 manual-reset-only 特例：
+这块板允许 BCU reset，不继承 i.MX8DXL 针对 `m4/if01` 的条件限制：
 
 ```bash
 sudo -n ../../tools/bcu/bcu reset -board=imx93evk14

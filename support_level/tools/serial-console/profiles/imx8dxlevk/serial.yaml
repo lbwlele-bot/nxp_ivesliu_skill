@@ -58,10 +58,13 @@ evidence:
   verified_at: "2026-07-24"
   case: ../../../../work/2026-07-23-imx8dxl-power-mode-ocram-suspend
   session: logs/v4-download-reset-serial-session.txt
+  bcu_reset_scope_case: ../../../../work/2026-07-24-imx8dxl-bcu-reset-serial-scope
+  bcu_reset_scope_session: logs/bcu-reset-current-boot-serial-session.yaml
 host_hazards:
   - ModemManager can disturb FT4232H ports.
   - ttyUSB0 and ttyUSB1 can silently fall back to 9600 after re-enumeration.
-  - BCU board access uses FT4232H channel 1 and detaches if01, which is also the M4 console.
-  - Never run BCU and serial-console concurrently.
-  - After BCU exits, recover if01 and require a fresh probe with all four interfaces before capture.
-  - Never use BCU reset on i.MX8DXL; use the physical RESET button after all captures are ready.
+  - BCU board access uses FT4232H channel 1 and can detach if01, which is also the M4 console.
+  - Never run BCU while capturing M4 early log on if01.
+  - BCU reset is allowed when capture explicitly excludes M4 and selects only a-core/if02 and scfw/if03; this was validated three times on the current B0 LPDDR4 specimen.
+  - After BCU exits, fresh-probe all four interfaces and recover if01 before any later M4 capture.
+  - Use the physical RESET button when M4 early log is required.

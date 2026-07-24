@@ -116,7 +116,8 @@ profile 可以记录串口侧风险，但 `serial-console` 不自行选择或执
 
 reset 能力属于板型和实物：
 
-- i.MX8DXL 当前是 manual-reset-only
+- i.MX8DXL 当前按观测目标区分：需要 `m4/if01` 早期日志时人工 reset；
+  只要求 A-core/SCFW 时当前实物已验证 BCU reset
 - 其它板必须按各自板级知识并与用户确认
 - 某块板的 reset 结论不得传播到其它 SoC 或 EVK
 

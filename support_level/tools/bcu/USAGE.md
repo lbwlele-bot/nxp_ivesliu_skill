@@ -54,8 +54,8 @@ sudo -n ./bcu set_gpio <GPIO_NAME> 0 -board=<board>
 - `bcu` 是板控工具，不是运行态验证工具
 - `bcu` 能改变板状态，执行前必须先明确当前状态和目标状态
 - BCU 与串口是否并发由板级知识决定，不能把某块板的限制传播到其它板：
-  DXL 当前禁止并发并使用人工 reset；i.MX93 可以先捕获实际日志口再用 BCU
-  reset
+  DXL 捕获 `m4/if01` 时禁止并发并使用人工 reset；如果明确排除 M4，
+  当前 DXL 实物已验证可先捕获 `a-core/if02`、`scfw/if03` 再用 BCU reset
 - 部分板卡的 BCU 与串口共用 FTDI；BCU 退出后要做串口 fresh probe。
   如果物理 interface 存在但未绑定驱动，使用 `serial-console recover`
 - 影响来自实际 FTDI 板控访问，不只来自 reset：当前 BCU 使用

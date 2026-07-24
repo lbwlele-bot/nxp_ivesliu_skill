@@ -26,7 +26,7 @@ case_required_for:
 warnings:
   - Full image restore and FAT file replacement are different risk classes.
   - Do not treat remoteproc stop as a default action.
-  - This board supports BCU reset; do not inherit the i.MX8DXL manual-reset-only rule.
+  - This board supports BCU reset; do not inherit DXL role-specific reset constraints.
   - Follow the packaged imx93evk14 serial profile for interface roles and BCU channel 1 recovery.
   - UUU transfer success does not prove Linux or M33 runtime success.
 

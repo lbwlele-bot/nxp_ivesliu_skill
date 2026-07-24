@@ -24,9 +24,9 @@ case_required_for:
   - board_reset_or_boot_mode_change
 
 warnings:
-  - The manual-reset-only rule is scoped to imx8dxlevk and must not be inherited by i.MX93, i.MX943, or another board profile.
-  - On i.MX8DXL, BCU is allowed only for boot-mode selection; never use bcu reset usb, bcu reset sd, or other bcu reset variants.
-  - BCU uses the same FT4232H if01 as the DXL M4 console; complete boot-mode selection first, then follow the packaged serial profile to recover and capture before physical RESET.
+  - DXL reset policy depends on required evidence because BCU channel 1 and the M4 console share FT4232H if01.
+  - If M4 early log is required, complete BCU boot-mode work first, recover if01, arm all captures, and request physical RESET.
+  - If M4 log is explicitly excluded, the current B0 LPDDR4 specimen supports BCU reset while capturing only a-core/if02 and scfw/if03.
   - Select the reference image from the current silicon revision, DDR, release, recipe, and loader; historical A1 assets are not a B0 baseline.
   - The A1 regression plus second-stage flash_m4 flow is historical case evidence, not the default i.MX8DXL recipe.
   - Prefer early boot flash.bin M-core loading on this DXL platform unless the case explicitly requires and validates bootaux or Linux remoteproc loading.
