@@ -1,0 +1,26 @@
+schema_version: 1
+id: imx-rm
+type: host_tool
+human_doc: USAGE.md
+owner: support
+
+summary: i.MX RM 章节索引和抽取工具，用于从 SoC_material 的本地 RM PDF 收敛资料证据。
+
+relations:
+  projects: []
+  compile_targets: []
+  software_stacks: []
+  release_packages: []
+  boards: []
+  tools: []
+
+case_required_for: []
+
+warnings:
+  - imx-rm is a reference-manual routing tool, not a board execution tool.
+  - RM evidence is auxiliary for source, DTS, driver, and board-state questions.
+  - The tool reads SoC_material RM PDFs, but this batch does not add a SoC_material relation node.
+
+evidence:
+  - USAGE.md
+  - ../../SoC_material/README.md

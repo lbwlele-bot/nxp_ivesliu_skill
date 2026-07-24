@@ -1,8 +1,22 @@
 # bcu
 
-- 程序入口：`./bcu`
+- 程序入口：`sudo -n ./bcu`
 - 当前版本：`bcu_1.1.128-0-ge7027dc`
 - 工具角色：板控 / 复位 / 启动模式控制 / GPIO 辅助控制
+
+## 权限硬规则
+
+本机执行任何 `bcu` 命令都必须使用：
+
+```bash
+sudo -n ./bcu <args>
+```
+
+包括版本、帮助、只读查询、boot mode、reset 和 GPIO 操作。
+
+- 不先尝试普通用户执行
+- `sudo -n` 失败时立即停止并报告权限问题
+- 不回退到不带 `sudo` 的命令
 
 ## 先读什么
 
@@ -21,18 +35,18 @@
 查版本或帮助：
 
 ```bash
-./bcu version
-./bcu -h
+sudo -n ./bcu version
+sudo -n ./bcu -h
 ```
 
 常见命令族：
 
 ```bash
-./bcu get_boot_mode -board=<board>
-./bcu set_boot_mode <BOOTMODE_NAME> -board=<board>
-./bcu reset <BOOTMODE_NAME> -board=<board>
-./bcu set_gpio <GPIO_NAME> 1 -board=<board>
-./bcu set_gpio <GPIO_NAME> 0 -board=<board>
+sudo -n ./bcu get_boot_mode -board=<board>
+sudo -n ./bcu set_boot_mode <BOOTMODE_NAME> -board=<board>
+sudo -n ./bcu reset <BOOTMODE_NAME> -board=<board>
+sudo -n ./bcu set_gpio <GPIO_NAME> 1 -board=<board>
+sudo -n ./bcu set_gpio <GPIO_NAME> 0 -board=<board>
 ```
 
 ## 使用边界
@@ -49,7 +63,7 @@
 
 ## 当前注意事项
 
-- 工具帮助明确提示：通常应使用 `sudo` 或配置好 `udev`
+- 当前工作区不使用普通用户 / udev 例外路径；固定使用 `sudo -n`
 - `-board=<board>` / `-auto` / `-id=` 这类选择项经常决定命令是否真正落到目标板
 - `-keep` 这类参数会保留临时控制状态，使用后要明确是否需要收回
 - 如果目标只是把卡住的板拉回“可重新判断、可重新操作”的基线，优先按板级文档里的已验证 reset / boot-mode 恢复动作做，不要临场发明新板控路径

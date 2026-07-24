@@ -48,11 +48,10 @@ configs/imx95_15x15_evk_defconfig
 U-Boot 常见直接构建形态：
 
 ```bash
-export ARCH=arm64
 export CROSS_COMPILE=/home/ives/桌面/NXP_v2/support_level/toolchain/arm-gnu-toolchain-14.3.rel1-x86_64-aarch64-none-linux-gnu/bin/aarch64-none-linux-gnu-
 
-make ARCH=arm64 CROSS_COMPILE=$CROSS_COMPILE O=build <defconfig>
-make ARCH=arm64 CROSS_COMPILE=$CROSS_COMPILE O=build -j$(nproc)
+make CROSS_COMPILE=$CROSS_COMPILE O=build <defconfig>
+make CROSS_COMPILE=$CROSS_COMPILE O=build -j$(nproc)
 ```
 
 常见产物包括 `build/u-boot.bin`、`build/u-boot-nodtb.bin`、

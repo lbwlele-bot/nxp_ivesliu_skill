@@ -1,0 +1,38 @@
+schema_version: 1
+id: imx95evk19
+type: board_profile
+human_doc: README.md
+owner: board-exec
+
+summary: i.MX95 19x19 LPDDR5 EVK 板级事实入口，覆盖 RTE/通用 Linux 分工、bcu 副作用和串口风险。
+
+relations:
+  projects: []
+  compile_targets: []
+  software_stacks: []
+  release_packages: []
+  boards: []
+  tools:
+    - serial-console
+    - uuu
+    - bcu
+
+case_required_for:
+  - bcu_reset
+  - boot_mode_change
+  - gpio_change
+  - uuu_transfer
+  - serial_log_capture
+
+warnings:
+  - Silicon revision is blocking when it affects OEI, firmware blobs, or imx-mkimage REV.
+  - bcu reset with -keep can leave ft_fta_sel high and suppress first-runtime output.
+  - USB hub failures must not be treated as image or packaging evidence.
+  - RTE and generic Linux flash.bin routes must remain explicit.
+
+evidence:
+  - README.md
+  - serial.yaml
+  - ../../tools/serial-console/USAGE.md
+  - ../../tools/uuu/USAGE.md
+  - ../../tools/bcu/USAGE.md

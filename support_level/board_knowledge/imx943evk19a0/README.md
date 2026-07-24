@@ -41,7 +41,7 @@
   `sudo -n bcu ...`
   一定能工作
 - 更稳定的入口应是显式路径，例如：
-  `../../tools/bcu/bcu`
+  `sudo -n ../../tools/bcu/bcu ...`
 
 ## 已验证的恢复动作
 

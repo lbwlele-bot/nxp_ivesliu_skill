@@ -1,0 +1,38 @@
+schema_version: 1
+id: imx943evk19a0
+type: board_profile
+human_doc: README.md
+owner: board-exec
+
+summary: i.MX943 EVK 19x19 A0 板级事实入口，包含 bcu、uuu、串口和保留核约束。
+
+relations:
+  projects: []
+  compile_targets: []
+  software_stacks: []
+  release_packages: []
+  boards: []
+  tools:
+    - serial-console
+    - uuu
+    - bcu
+
+case_required_for:
+  - bcu_reset
+  - boot_mode_change
+  - uuu_transfer
+  - serial_log_capture
+  - mcore_payload_probe
+
+warnings:
+  - bcu is a strong board-state signal for this board, but it does not prove runtime success.
+  - m33_0 is a reserved SMFW core and must not be treated as a free case target.
+  - ttyUSB3 is not the default Linux shell.
+  - Reset, uuu success, or serial silence cannot skip the boot-stage probe.
+
+evidence:
+  - README.md
+  - serial.yaml
+  - ../../tools/serial-console/USAGE.md
+  - ../../tools/uuu/USAGE.md
+  - ../../tools/bcu/USAGE.md

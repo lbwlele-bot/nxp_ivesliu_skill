@@ -29,12 +29,12 @@
 - 它把系统从哪个阶段带到哪个阶段
 - 它建立的是“最终运行态”，还是“下一阶段的可操作态”
 
-## `uuu -b sd <flash.bin>` 常见含义
+## `sudo -n uuu -b sd <flash.bin>` 常见含义
 
 在很多 lane 里，第一次：
 
 ```bash
-uuu -b sd <flash.bin>
+sudo -n <uuu-path> -b sd <flash.bin>
 ```
 
 它的重要意义不只是把某个镜像写进去，
@@ -48,7 +48,7 @@ uuu -b sd <flash.bin>
 - `Fastboot`
 - 或至少是一个可继续通过 `FB` 操作的状态
 
-所以第一次 `uuu -b sd` 的真正价值，经常是：
+所以第一次 `sudo -n <uuu-path> -b sd` 的真正价值，经常是：
 
 - 建立可继续烧录的运行时 relay
 
@@ -56,11 +56,12 @@ uuu -b sd <flash.bin>
 
 ## 第一轮和第二轮 `uuu` 不一定语义相同
 
-当第一次 `uuu -b sd flash.bin` 已经把板子带到了 live `Fastboot` session，
+当第一次 `sudo -n <uuu-path> -b sd flash.bin` 已经把板子带到了 live
+`Fastboot` session，
 那么第二次：
 
 ```bash
-uuu -b sd <another-flash-image>
+sudo -n <uuu-path> -b sd <another-flash-image>
 ```
 
 之所以还能成功，
@@ -74,7 +75,7 @@ uuu -b sd <another-flash-image>
 
 这意味着：
 
-- 同样是 `uuu -b sd`
+- 同样是 `sudo -n <uuu-path> -b sd`
 - 第一次和第二次的语义并不相同
 
 第一次更像：

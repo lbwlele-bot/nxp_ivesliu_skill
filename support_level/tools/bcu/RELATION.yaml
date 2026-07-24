@@ -1,0 +1,44 @@
+schema_version: 1
+id: bcu
+type: host_tool
+human_doc: USAGE.md
+owner: board-exec
+
+summary: 板控工具，负责 boot mode 查询/切换、reset 和 GPIO 辅助控制。
+
+execution:
+  executable: ./bcu
+  required_prefix:
+    - sudo
+    - -n
+  unprivileged_fallback: forbidden
+
+relations:
+  projects: []
+  compile_targets: []
+  software_stacks: []
+  release_packages: []
+  boards:
+    - imx8dxlevk
+    - imx943evk19a0
+    - imx95evk19
+  tools: []
+
+case_required_for:
+  - boot_mode_change
+  - board_reset
+  - gpio_change
+
+warnings:
+  - Every bcu invocation, including read-only queries, must use sudo -n.
+  - If sudo -n fails, stop and report the permission failure; never retry unprivileged.
+  - bcu can change board state; fresh probe is required before and after state-changing actions.
+  - bcu is not a runtime verification tool.
+  - Board-specific bcu defaults and recovery paths belong in board_knowledge/<board>/README.md.
+  - Options such as -board, -auto, -id, and -keep can change what the command actually affects.
+
+evidence:
+  - USAGE.md
+  - ../../board_knowledge/imx8dxlevk/README.md
+  - ../../board_knowledge/imx943evk19a0/README.md
+  - ../../board_knowledge/imx95evk19/README.md

@@ -5,6 +5,8 @@
 - 板型：`i.MX8DXL EVK`
 - 当前主机：Ubuntu 本机
 - 来源：旧 `imx8` 入口资料、`imx8dxl` 板控经验、本地 `i.MX8` 故障记录中的已验证结论
+- manual-reset-only 只适用于 i.MX8DXL，不得传播到 i.MX93、i.MX943
+  或其它板型。
 
 ## 默认识别
 
@@ -12,12 +14,18 @@
   `0403:6011 FT4232H`
 - 机器可读串口映射：
   `serial.yaml`
-- 已验证串口映射：
-  - `ttyUSB1`：`M4`
-  - `ttyUSB2`：`U-Boot` / `Fastboot` / Linux early boot
-  - `ttyUSB3`：`SCFW`
+- 已验证串口顺序：
+  - 第 1 个 COM / `if00` / 通常 `ttyUSB0`：未作为当前默认运行日志口
+  - 第 2 个 COM / `if01` / 通常 `ttyUSB1`：`M4`
+  - 第 3 个 COM / `if02` / 通常 `ttyUSB2`：`U-Boot` / `Fastboot` / Linux early boot
+  - 第 4 个 COM / `if03` / 通常 `ttyUSB3`：`SCFW`
 - 已验证串口参数：
   `115200 8N1`
+
+这里优先按 FT4232H 的 interface 顺序记忆和核对串口角色。
+Linux 的裸 `ttyUSB*` 编号通常会和这个顺序一致，
+但实操时仍优先用 `/dev/serial/by-id/...ifNN-port0`，
+避免重新枚举后编号漂移。
 
 ## 下载态识别
 
@@ -33,13 +41,30 @@
 
 ## 当前工作方式
 
-- 当前这块 `i.MX8DXL` 不使用 `bcu`
-- reset / 启动拨码切换依赖用户手动操作
+- 对新换的 `i.MX8DXL EVK`（LPDDR4，B0 芯片），
+  已验证 `bcu` 可以控制 boot mode。
+- `bcu` 需要使用 `sudo -n`；
+  普通用户执行 `get_boot_mode` 可能报 `no ack received`。
+- 当前允许的 BCU 命令只用于切 boot mode：
+  - `sudo -n bcu init usb -board=imx8dxlevk`
+  - `sudo -n bcu init sd -board=imx8dxlevk`
+- i.MX8DXL 当前流程禁止使用 `bcu reset usb`、`bcu reset sd`
+  或其它 `bcu reset` 变体。
+- reset owner 固定为用户：
+  先准备 M4/A-core/SCFW 三路串口捕获，再由用户手动按板上 RESET。
+- 原因不是 `bcu reset` 命令一定返回失败，而是该动作会使 FT4232H
+  串口短暂断开和重新枚举，早期 M4/SCFW 字节无法找回，并会让后续
+  board-state 判断反复建立在不完整日志上。
+- 这块板的 EEPROM 当前为空，`bcu` 会提示可写 EEPROM；
+  `bcu eeprom -w -board=imx8dxlevk` 属于长期配置动作，需用户明确同意。
+- 对旧板或未复测板，仍不要自动套用本条 BCU 结论。
+- 如果 BCU 不可用，boot mode 改用板上拨码；reset 仍由用户手动按键。
 - 当前状态主要靠：
   1. `lsusb`
   2. `uuu -lsusb`
   3. 已验证的 UART 现场证据
-- 不要把旧 `bcu` 痕迹继续当成当前默认流程
+- 不要把 `bcu` 成功返回单独当作运行态证明；
+  手动 reset 后仍需用 USB 枚举和串口 fresh probe 判断当前阶段。
 
 ## 已验证的主机侧串口纪律
 
@@ -125,16 +150,50 @@
 
 - `ModemManager` 会干扰 FT4232H 端口
 - `ttyUSB0` / `ttyUSB1` 可能静默掉回 `9600`
+- 不使用 BCU reset。该动作会使 FT4232H 串口短暂重新枚举；
+  `--reconnect` 只能恢复后续抓取，无法找回物理断开期间已经输出的
+  M4/SCFW 早期字节。
+- 固定顺序是：先打开三路捕获，切换目标 boot mode，再由用户手动按
+  板上 RESET。
 - 如果另一台机器能看到日志，本机看不到，
   先查主机串口层，不要先怪镜像
+
+## 当前 B0 LPDDR4 EVK 复测记录
+
+2026-07-22 当前新板复测：
+
+- `bcu init usb` 后可读回 `get_boot_mode: usb, hex value: 0x1`
+- 历史测试曾证明 `bcu reset usb/sd` 能改变板状态，但该结论只保留为
+  工具能力证据；自 2026-07-24 起不再作为 i.MX8DXL 操作 recipe。
+- 当前 recipe 为 `bcu init usb/sd` 只切模式，随后用户手动按 RESET。
+- 第 2 个 COM / `if01` / `ttyUSB1` 抓到 M4 输出：
+  `RPMSG Link is up!`
+- 第 3 个 COM / `if02` / `ttyUSB2` 抓到 SPL、U-Boot、Linux 和 login prompt
+- 第 4 个 COM / `if03` / `ttyUSB3` 抓到 SCFW banner
+
+SCFW 编译与第 4 个 COM：
+
+- 当前 `scfw_export_mx8dxl_a0` porting kit 需基于它自带的 A0
+  预编译对象链接，不能把空的 `R=B0` 输出目录当作完整源码包重建。
+- 需传 `D=1 U=2`；`U=2` 选择 `LPUART_SC` / `if03` / 第 4 个 COM。
+- 只传 `D=1` 不够；`U` 默认为 `0`，该路径下
+  `board_get_debug_uart()` 返回 `NULL`，SCFW 可以正常启动但串口无输出。
+- B0 芯片的硬约束仍是 imx-mkimage `REV=B0` 和
+  `mx8dxlb0-ahab-container.img`，不与 SCFW porting kit 对象 revision 混用。
+
+本轮原始记录在：
+
+- `../../work/2026-07-22-imx8dxl-b0-lpddr4-bcu-bootmode/`
 
 ## 已验证的资产优先级
 
 对 `i.MX8DXL + lf-6.18.2-1.0.0`：
 
-- 先复用已验证的资产根
-- 先复用已验证 `A1 AHAB`
-- 不要重新去猜 `AHAB` / `SCFW` 组合
+- 先按当前实物芯片 revision 选择 AHAB，不能把旧 A1 EVK 的 AHAB
+  默认套到 B0 板上
+- 当前 B0 LPDDR4 EVK 已定位到 B0 AHAB：
+  `firmware/imx8dxl/imx-seco-3.7.4/firmware/seco/mx8dxlb0-ahab-container.img`
+- `SCFW` 文件名当前不带 A1/B0；使用前记录来源、hash，并用上板日志验证组合
 
 ## 注意事项
 

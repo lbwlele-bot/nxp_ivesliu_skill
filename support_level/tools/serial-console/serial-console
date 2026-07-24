@@ -8,6 +8,7 @@ import re
 import select
 import subprocess
 import sys
+import threading
 import time
 import tty
 import termios
@@ -19,6 +20,9 @@ import yaml
 
 SUPPORT_ROOT = Path(__file__).resolve().parents[2]
 BOARD_ROOT = SUPPORT_ROOT / "board_knowledge"
+DEV_ROOT = Path("/dev")
+SYS_TTY_ROOT = Path("/sys/class/tty")
+PROFILE_STATES = {"verified", "partial", "unknown"}
 
 
 def load_profile(board: str) -> dict[str, Any]:
@@ -29,15 +33,70 @@ def load_profile(board: str) -> dict[str, Any]:
         data = yaml.safe_load(handle) or {}
     if not isinstance(data, dict):
         raise SystemExit(f"invalid serial profile: {path}")
+    validate_profile(data, path)
     return data
 
 
-def by_id_dir() -> Path:
-    return Path("/dev/serial/by-id")
+def validate_profile(profile: dict[str, Any], path: Path | None = None) -> None:
+    label = str(path or "<profile>")
+    schema_version = int(profile.get("schema_version") or 1)
+    if schema_version not in {1, 2}:
+        raise SystemExit(f"unsupported serial profile schema {schema_version}: {label}")
+
+    state = str(profile.get("profile_status") or "unknown")
+    if state not in PROFILE_STATES:
+        raise SystemExit(f"invalid profile_status '{state}': {label}")
+
+    ports = profile.get("ports") or {}
+    if not isinstance(ports, dict):
+        raise SystemExit(f"serial profile field 'ports' must be a mapping: {label}")
+
+    seen_orders: dict[int, str] = {}
+    seen_interfaces: dict[str, str] = {}
+    for role, raw_entry in ports.items():
+        if not isinstance(raw_entry, dict):
+            raise SystemExit(f"serial role '{role}' must be a mapping: {label}")
+        order = raw_entry.get("order")
+        if order is not None:
+            order = int(order)
+            if order < 1:
+                raise SystemExit(f"serial role '{role}' has invalid order {order}: {label}")
+            if order in seen_orders:
+                raise SystemExit(
+                    f"serial roles '{seen_orders[order]}' and '{role}' share order {order}: {label}"
+                )
+            seen_orders[order] = str(role)
+        interface = normalize_interface(raw_entry.get("interface"))
+        if raw_entry.get("interface") is not None and not interface:
+            raise SystemExit(
+                f"serial role '{role}' has invalid interface "
+                f"'{raw_entry.get('interface')}': {label}"
+            )
+        if interface:
+            if interface in seen_interfaces:
+                raise SystemExit(
+                    f"serial roles '{seen_interfaces[interface]}' and '{role}' share interface "
+                    f"{interface}: {label}"
+                )
+            seen_interfaces[interface] = str(role)
+        if order is not None and interface and int(interface[2:], 16) + 1 != order:
+            raise SystemExit(
+                f"serial role '{role}' order {order} does not match interface "
+                f"{interface}: {label}"
+            )
+        port_state = str(raw_entry.get("status") or "unknown")
+        if port_state not in PROFILE_STATES:
+            raise SystemExit(
+                f"serial role '{role}' has invalid status '{port_state}': {label}"
+            )
 
 
-def list_by_id() -> dict[str, str]:
-    root = by_id_dir()
+def by_id_dir(dev_root: Path = DEV_ROOT) -> Path:
+    return dev_root / "serial/by-id"
+
+
+def list_by_id(dev_root: Path = DEV_ROOT) -> dict[str, str]:
+    root = by_id_dir(dev_root)
     if not root.exists():
         return {}
     result: dict[str, str] = {}
@@ -47,8 +106,221 @@ def list_by_id() -> dict[str, str]:
     return result
 
 
-def list_ttyusb() -> list[str]:
-    return sorted(str(path) for path in Path("/dev").glob("ttyUSB*"))
+def list_serial_ttys(dev_root: Path = DEV_ROOT) -> list[str]:
+    paths = list(dev_root.glob("ttyUSB*")) + list(dev_root.glob("ttyACM*"))
+    return sorted(str(path) for path in paths)
+
+
+def read_text(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8").strip()
+    except OSError:
+        return ""
+
+
+def normalize_interface(value: Any) -> str:
+    if value is None:
+        return ""
+    match = re.fullmatch(r"(?:if)?([0-9a-fA-F]{1,2})", str(value).strip())
+    if not match:
+        return ""
+    return f"if{int(match.group(1), 16):02d}"
+
+
+def interface_from_by_id(name: str) -> str:
+    match = re.search(r"-if([0-9a-fA-F]{1,2})-", name)
+    return normalize_interface(match.group(1)) if match else ""
+
+
+def find_parent_with(start: Path, filename: str) -> Path | None:
+    for candidate in (start, *start.parents):
+        if (candidate / filename).is_file():
+            return candidate
+    return None
+
+
+def discover_serial_interfaces(
+    dev_root: Path = DEV_ROOT,
+    sys_tty_root: Path = SYS_TTY_ROOT,
+) -> list[dict[str, Any]]:
+    by_id = list_by_id(dev_root)
+    by_target = {str(Path(target).resolve()): name for name, target in by_id.items()}
+    records: list[dict[str, Any]] = []
+
+    for device_text in list_serial_ttys(dev_root):
+        device = Path(device_text)
+        canonical_device = str(device.resolve())
+        by_id_name = by_target.get(canonical_device, "")
+        interface = interface_from_by_id(by_id_name)
+        adapter_key = ""
+        usb_id = ""
+        adapter_serial = ""
+        product_name = ""
+        sys_device = sys_tty_root / device.name / "device"
+
+        if sys_device.exists():
+            resolved = sys_device.resolve()
+            interface_dir = find_parent_with(resolved, "bInterfaceNumber")
+            usb_dir = find_parent_with(resolved, "idVendor")
+            if interface_dir:
+                raw_interface = read_text(interface_dir / "bInterfaceNumber")
+                if raw_interface:
+                    interface = normalize_interface(raw_interface)
+            if usb_dir:
+                vendor = read_text(usb_dir / "idVendor").lower()
+                product = read_text(usb_dir / "idProduct").lower()
+                usb_id = f"{vendor}:{product}" if vendor and product else ""
+                adapter_serial = read_text(usb_dir / "serial")
+                product_name = read_text(usb_dir / "product")
+                adapter_key = str(usb_dir.resolve())
+
+        if not adapter_key and by_id_name:
+            adapter_key = re.sub(r"-if[0-9a-fA-F]{1,2}-port\d+$", "", by_id_name)
+        if not adapter_key:
+            adapter_key = f"unresolved:{device.name}"
+
+        records.append(
+            {
+                "adapter_key": adapter_key,
+                "adapter_serial": adapter_serial,
+                "by_id": by_id_name,
+                "device": str(device),
+                "interface": interface,
+                "product": product_name,
+                "tty": device.name,
+                "usb_id": usb_id,
+            }
+        )
+
+    return records
+
+
+def group_serial_interfaces(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    grouped: dict[str, dict[str, Any]] = {}
+    for record in records:
+        key = str(record["adapter_key"])
+        group = grouped.setdefault(
+            key,
+            {
+                "key": key,
+                "serial": record.get("adapter_serial", ""),
+                "usb_id": record.get("usb_id", ""),
+                "product": record.get("product", ""),
+                "interfaces": [],
+            },
+        )
+        group["interfaces"].append(dict(record))
+
+    result = []
+    for group in grouped.values():
+        group["interfaces"].sort(
+            key=lambda item: (
+                int(item["interface"][2:], 16) if item.get("interface") else 999,
+                item["device"],
+            )
+        )
+        for order, interface in enumerate(group["interfaces"], 1):
+            interface["order"] = order
+            if not interface.get("interface"):
+                interface["interface"] = f"if{order - 1:02d}"
+        result.append(group)
+    return sorted(result, key=lambda item: item["key"])
+
+
+def discover_adapter_groups() -> list[dict[str, Any]]:
+    return group_serial_interfaces(discover_serial_interfaces())
+
+
+def adapter_spec(profile: dict[str, Any]) -> dict[str, Any]:
+    raw = profile.get("adapter") or {}
+    if isinstance(raw, dict):
+        return raw
+    return {"name": str(raw)}
+
+
+def port_interface(entry: dict[str, Any]) -> str:
+    interface = normalize_interface(entry.get("interface"))
+    if interface:
+        return interface
+    by_id = str(entry.get("by_id") or "")
+    if by_id:
+        return interface_from_by_id(by_id)
+    order = entry.get("order")
+    if order is not None:
+        return f"if{int(order) - 1:02d}"
+    return ""
+
+
+def group_matches_profile(group: dict[str, Any], profile: dict[str, Any]) -> tuple[bool, int]:
+    spec = adapter_spec(profile)
+    expected_usb_id = str(spec.get("usb_id") or "").lower()
+    if expected_usb_id and str(group.get("usb_id") or "").lower() != expected_usb_id:
+        return False, 0
+
+    actual_interfaces = {item["interface"] for item in group["interfaces"]}
+    known_interfaces = {
+        port_interface(entry)
+        for entry in get_ports(profile).values()
+        if port_interface(entry)
+    }
+
+    score = len(known_interfaces & actual_interfaces) * 10
+    score -= len(known_interfaces - actual_interfaces) * 10
+    expected_count = spec.get("interface_count")
+    if expected_count is not None and len(group["interfaces"]) == int(expected_count):
+        score += 5
+    if expected_usb_id:
+        score += 20
+
+    known_by_ids = {
+        str(entry.get("by_id"))
+        for entry in get_ports(profile).values()
+        if entry.get("by_id")
+    }
+    actual_by_ids = {str(item.get("by_id")) for item in group["interfaces"] if item.get("by_id")}
+    score += len(known_by_ids & actual_by_ids) * 30
+    return True, score
+
+
+def select_adapter_group(
+    groups: list[dict[str, Any]],
+    profile: dict[str, Any] | None,
+    selector: str | None,
+) -> tuple[dict[str, Any] | None, str]:
+    candidates = groups
+    if selector:
+        candidates = [
+            group
+            for group in groups
+            if selector
+            in {
+                str(group.get("key") or ""),
+                str(group.get("serial") or ""),
+                str(group.get("usb_id") or ""),
+            }
+        ]
+        if not candidates:
+            return None, f"adapter selector did not match: {selector}"
+
+    if profile:
+        scored = []
+        for group in candidates:
+            matches, score = group_matches_profile(group, profile)
+            if matches:
+                scored.append((score, group))
+        if not scored:
+            return None, "no detected adapter matches the board profile"
+        best_score = max(score for score, _ in scored)
+        best = [group for score, group in scored if score == best_score]
+        if len(best) != 1:
+            return None, "multiple adapters match the board profile; pass --adapter"
+        return best[0], ""
+
+    if len(candidates) == 1:
+        return candidates[0], ""
+    if not candidates:
+        return None, "no USB serial adapter detected"
+    return None, "multiple serial adapters detected; pass --adapter"
 
 
 def get_ports(profile: dict[str, Any]) -> dict[str, dict[str, Any]]:
@@ -58,8 +330,23 @@ def get_ports(profile: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return ports
 
 
-def resolve_device(profile: dict[str, Any], role: str | None, device: str | None) -> str:
+def interface_map(group: dict[str, Any] | None) -> dict[str, dict[str, Any]]:
+    if not group:
+        return {}
+    return {str(item["interface"]): item for item in group["interfaces"]}
+
+
+def resolve_device(
+    profile: dict[str, Any],
+    role: str | None,
+    device: str | None,
+    *,
+    group: dict[str, Any] | None = None,
+    require_present: bool = False,
+) -> str:
     if device:
+        if require_present and not Path(device).exists():
+            raise SystemExit(f"serial device not present: {device}")
         return device
     if not role:
         raise SystemExit("pass --role or --device")
@@ -75,11 +362,149 @@ def resolve_device(profile: dict[str, Any], role: str | None, device: str | None
         if candidate.exists():
             return str(candidate)
 
+    if group is None:
+        detected_groups = discover_adapter_groups()
+        group, _ = select_adapter_group(detected_groups, profile, None)
+    interface = port_interface(entry)
+    detected = interface_map(group).get(interface)
+    if detected:
+        detected_by_id = detected.get("by_id")
+        if detected_by_id:
+            candidate = by_id_dir() / str(detected_by_id)
+            if candidate.exists():
+                return str(candidate)
+        return str(detected["device"])
+
     tty_path = entry.get("tty")
-    if tty_path:
+    if tty_path and (not require_present or Path(str(tty_path)).exists()):
         return str(tty_path)
 
+    if require_present:
+        expected = interface or by_id or tty_path or "<unmapped>"
+        raise SystemExit(f"serial role '{role}' is not present; expected {expected}")
     raise SystemExit(f"role '{role}' has no by_id or tty mapping")
+
+
+def build_discovery_profile(group: dict[str, Any]) -> dict[str, Any]:
+    ports: dict[str, dict[str, Any]] = {}
+    for item in group["interfaces"]:
+        role = f"port{int(item['order'])}"
+        ports[role] = {
+            "order": int(item["order"]),
+            "interface": item["interface"],
+            "by_id": item.get("by_id") or None,
+            "tty": item["device"],
+            "description": "Discovered port; role is not known",
+            "default_capture": True,
+            "required": True,
+            "status": "unknown",
+        }
+    return {
+        "schema_version": 2,
+        "board": "unclassified",
+        "profile_status": "unknown",
+        "adapter": {
+            "name": group.get("product") or "discovered USB serial adapter",
+            "usb_id": group.get("usb_id") or "",
+            "interface_count": len(group["interfaces"]),
+        },
+        "baudrate": 115200,
+        "format": "8N1",
+        "prefer_by_id": True,
+        "ports": ports,
+    }
+
+
+def default_capture_roles(profile: dict[str, Any]) -> list[str]:
+    ports = get_ports(profile)
+    explicit = [
+        str(role)
+        for role, entry in ports.items()
+        if bool(entry.get("default_capture"))
+    ]
+    if explicit:
+        return sorted(explicit, key=lambda role: int(ports[role].get("order") or 999))
+
+    configured = profile.get("default_capture_roles")
+    if isinstance(configured, list) and configured:
+        return [str(role) for role in configured if str(role) in ports]
+
+    preferred = [role for role in ("m4", "a-core", "linux", "scfw") if role in ports]
+    if preferred:
+        return preferred
+    return [
+        role
+        for role, entry in sorted(
+            ports.items(),
+            key=lambda item: int(item[1].get("order") or 999),
+        )
+        if role != "first-com"
+    ]
+
+
+def probe_profile(
+    profile: dict[str, Any],
+    group: dict[str, Any] | None,
+) -> dict[str, Any]:
+    result: dict[str, Any] = {
+        "profile_status": str(profile.get("profile_status") or "unknown"),
+        "adapter": group,
+        "ports": [],
+        "errors": [],
+        "warnings": [],
+    }
+    if group is None:
+        result["errors"].append("no matching serial adapter")
+        for role, entry in get_ports(profile).items():
+            result["ports"].append(
+                {
+                    "role": role,
+                    "order": entry.get("order"),
+                    "interface": port_interface(entry),
+                    "device": "",
+                    "present": False,
+                    "required": bool(entry.get("required")),
+                    "status": str(entry.get("status") or "unknown"),
+                }
+            )
+        return result
+
+    spec = adapter_spec(profile)
+    expected_count = spec.get("interface_count")
+    actual_count = len(group["interfaces"])
+    if expected_count is not None and actual_count != int(expected_count):
+        result["errors"].append(
+            f"adapter interface count mismatch: expected {expected_count}, detected {actual_count}"
+        )
+
+    detected = interface_map(group)
+    for role, entry in get_ports(profile).items():
+        interface = port_interface(entry)
+        actual = detected.get(interface)
+        required = bool(entry.get("required"))
+        row = {
+            "role": role,
+            "order": entry.get("order"),
+            "interface": interface,
+            "device": actual.get("device", "") if actual else "",
+            "by_id": actual.get("by_id", "") if actual else "",
+            "present": bool(actual),
+            "required": required,
+            "default_capture": bool(entry.get("default_capture")),
+            "status": str(entry.get("status") or "unknown"),
+            "log_sources": entry.get("log_sources") or [],
+        }
+        result["ports"].append(row)
+        if required and not actual:
+            result["errors"].append(f"required role '{role}' is missing ({interface or 'unmapped'})")
+        elif not actual:
+            result["warnings"].append(f"known role '{role}' is not present")
+
+    if result["profile_status"] != "verified":
+        result["warnings"].append(
+            f"profile is {result['profile_status']}; unmapped interfaces must not be assigned a role"
+        )
+    return result
 
 
 def profile_baud(profile: dict[str, Any], baud: int | None) -> int:
@@ -116,10 +541,137 @@ def emit(data: bytes) -> None:
     sys.stdout.buffer.flush()
 
 
+def touch_log(log_path: str | None) -> None:
+    if not log_path:
+        return
+    path = Path(log_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.touch(exist_ok=True)
+
+
+def capture_role_loop(
+    *,
+    profile: dict[str, Any],
+    role: str,
+    device: str | None,
+    group: dict[str, Any] | None,
+    baud: int,
+    log_path: str | None,
+    timeout: float,
+    read_timeout: float,
+    chunk_size: int,
+    reconnect: bool,
+    reconnect_interval: float,
+    tee: bool,
+    expect_data: bool,
+    initial_serial: serial.Serial | None = None,
+    start_event: threading.Event | None = None,
+) -> dict[str, Any]:
+    started = time.strftime("%Y-%m-%dT%H:%M:%S%z")
+    result: dict[str, Any] = {
+        "role": role,
+        "log": log_path,
+        "started": started,
+        "ended": "",
+        "opened_at": "",
+        "first_byte_at": "",
+        "bytes": 0,
+        "opens": 0,
+        "disconnects": 0,
+        "reconnects": 0,
+        "status": 0,
+        "state": "starting",
+        "expect_data": expect_data,
+        "connected_at_end": False,
+        "last_device": "",
+        "last_error": "",
+    }
+    touch_log(log_path)
+    ser = initial_serial
+    if ser is not None:
+        result["opens"] = 1
+        result["opened_at"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
+        result["last_device"] = str(getattr(ser, "port", device) or device or "")
+
+    if start_event is not None:
+        start_event.wait()
+    deadline = time.monotonic() + timeout
+
+    while time.monotonic() < deadline:
+        if ser is None:
+            selected = resolve_device(profile, role, device, group=group)
+            result["last_device"] = selected
+            is_reconnect = bool(result["opens"] or result["last_error"])
+            if is_reconnect:
+                result["reconnects"] += 1
+            try:
+                ser = open_serial(selected, baud, read_timeout)
+                result["opens"] += 1
+                if not result["opened_at"]:
+                    result["opened_at"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
+                if is_reconnect:
+                    append_log(
+                        log_path,
+                        f"[serial-console reconnected: {selected}]\n".encode(),
+                    )
+            except (serial.SerialException, OSError) as exc:
+                result["last_error"] = str(exc)
+                if not reconnect:
+                    result["status"] = 1
+                    break
+                time.sleep(reconnect_interval)
+                continue
+
+        try:
+            data = ser.read(chunk_size)
+            if data:
+                if not result["first_byte_at"]:
+                    result["first_byte_at"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
+                result["bytes"] += len(data)
+                append_log(log_path, data)
+                if tee:
+                    emit(data)
+        except (serial.SerialException, OSError) as exc:
+            result["last_error"] = str(exc)
+            result["disconnects"] += 1
+            append_log(log_path, f"\n[serial-console disconnect: {exc}]\n".encode())
+            try:
+                ser.close()
+            except (serial.SerialException, OSError):
+                pass
+            ser = None
+            if not reconnect:
+                result["status"] = 1
+                break
+
+    if ser is not None:
+        result["connected_at_end"] = True
+        try:
+            ser.close()
+        except (serial.SerialException, OSError) as exc:
+            result["last_error"] = str(exc)
+            result["connected_at_end"] = False
+
+    if result["opens"] == 0:
+        result["state"] = "not-opened"
+        result["status"] = 1
+    elif not result["connected_at_end"]:
+        result["state"] = "disconnected"
+        result["status"] = 1
+    elif result["bytes"] == 0:
+        result["state"] = "empty"
+        result["status"] = 2 if expect_data else 0
+    else:
+        result["state"] = "data"
+    result["ended"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
+    return result
+
+
 def cmd_list(args: argparse.Namespace) -> int:
     profile = load_profile(args.board) if args.board else {}
     by_id = list_by_id()
-    ttyusb = list_ttyusb()
+    serial_ttys = list_serial_ttys()
+    groups = discover_adapter_groups()
 
     print("by-id:")
     for name, target in by_id.items():
@@ -127,20 +679,93 @@ def cmd_list(args: argparse.Namespace) -> int:
     if not by_id:
         print("  <none>")
 
-    print("ttyUSB:")
-    for path in ttyusb:
+    print("serial devices:")
+    for path in serial_ttys:
         print(f"  {path}")
-    if not ttyusb:
+    if not serial_ttys:
         print("  <none>")
 
     if profile:
         print(f"board: {args.board}")
+        print(f"profile_status: {profile.get('profile_status', 'unknown')}")
         print(f"baudrate: {profile_baud(profile, args.baud)}")
+        group, error = select_adapter_group(groups, profile, None)
+        detected = interface_map(group)
         for role, entry in get_ports(profile).items():
-            device = resolve_device(profile, role, None)
+            interface = port_interface(entry)
+            actual = detected.get(interface)
+            device = actual["device"] if actual else str(entry.get("tty") or "<missing>")
             desc = entry.get("description", "")
-            print(f"  {role}: {device}" + (f" ({desc})" if desc else ""))
+            present = "present" if actual else "missing"
+            print(
+                f"  {role}: {interface or '?'} {device} [{present}]"
+                + (f" ({desc})" if desc else "")
+            )
+        if error:
+            print(f"profile match: {error}")
     return 0
+
+
+def print_adapter_groups(groups: list[dict[str, Any]]) -> None:
+    print(f"detected adapters: {len(groups)}")
+    for index, group in enumerate(groups, 1):
+        identity = group.get("serial") or group.get("key")
+        print(
+            f"  [{index}] {group.get('usb_id') or 'usb-id-unknown'} "
+            f"{group.get('product') or 'USB serial adapter'} "
+            f"interfaces={len(group['interfaces'])} id={identity}"
+        )
+        for interface in group["interfaces"]:
+            by_id = interface.get("by_id") or "<none>"
+            print(
+                f"      order={interface['order']} {interface['interface']} "
+                f"{interface['device']} by-id={by_id}"
+            )
+
+
+def cmd_probe(args: argparse.Namespace) -> int:
+    groups = discover_adapter_groups()
+    print_adapter_groups(groups)
+    profile = load_profile(args.board) if args.board else None
+
+    if not profile:
+        if args.adapter:
+            group, error = select_adapter_group(groups, None, args.adapter)
+            if error:
+                print(f"probe error: {error}", file=sys.stderr)
+                return 1
+            print(f"selected adapter: {group['key']}")
+        return 0 if groups else 1
+
+    group, selection_error = select_adapter_group(groups, profile, args.adapter)
+    result = probe_profile(profile, group)
+    if selection_error:
+        result["errors"] = [selection_error]
+
+    print(f"board: {args.board}")
+    print(f"profile_status: {result['profile_status']}")
+    if group:
+        print(f"selected adapter: {group['key']}")
+    for port in result["ports"]:
+        flags = []
+        if port.get("required"):
+            flags.append("required")
+        if port.get("default_capture"):
+            flags.append("default-capture")
+        flags.append(str(port.get("status") or "unknown"))
+        sources = ",".join(str(item) for item in port.get("log_sources") or [])
+        print(
+            f"  {port['role']}: order={port.get('order') or '?'} "
+            f"{port.get('interface') or '?'} "
+            f"{port.get('device') or '<missing>'} "
+            f"[{','.join(flags)}]"
+            + (f" logs={sources}" if sources else "")
+        )
+    for warning in result["warnings"]:
+        print(f"warning: {warning}")
+    for error in result["errors"]:
+        print(f"error: {error}", file=sys.stderr)
+    return 1 if result["errors"] else 0
 
 
 def stty_device(device: str, baud: int) -> tuple[int, str]:
@@ -162,24 +787,42 @@ def stty_device(device: str, baud: int) -> tuple[int, str]:
     return proc.returncode, proc.stdout.strip()
 
 
+def stop_modemmanager() -> int:
+    proc = subprocess.run(
+        ["sudo", "-n", "systemctl", "stop", "ModemManager"],
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+    print(f"ModemManager stop: exit={proc.returncode}")
+    if proc.stdout.strip():
+        print(proc.stdout.strip())
+    return int(proc.returncode)
+
+
 def cmd_prepare(args: argparse.Namespace) -> int:
     profile = load_profile(args.board)
     baud = profile_baud(profile, args.baud)
     if args.stop_modemmanager:
-        proc = subprocess.run(
-            ["sudo", "-n", "systemctl", "stop", "ModemManager"],
-            text=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-        )
-        print(f"ModemManager stop: exit={proc.returncode}")
-        if proc.stdout.strip():
-            print(proc.stdout.strip())
+        if stop_modemmanager():
+            return 1
 
-    roles = args.role or sorted(get_ports(profile))
+    ports = get_ports(profile)
+    roles = args.role or [
+        role
+        for role, _ in sorted(
+            ports.items(),
+            key=lambda item: int(item[1].get("order") or 999),
+        )
+    ]
+    groups = discover_adapter_groups()
+    group, error = select_adapter_group(groups, profile, args.adapter)
+    if error:
+        print(f"prepare error: {error}", file=sys.stderr)
+        return 1
     status = 0
     for role in roles:
-        device = resolve_device(profile, role, None)
+        device = resolve_device(profile, role, None, group=group, require_present=True)
         code, output = stty_device(device, baud)
         print(f"{role}: {device}: stty exit={code}")
         if output:
@@ -190,21 +833,262 @@ def cmd_prepare(args: argparse.Namespace) -> int:
 
 def cmd_capture(args: argparse.Namespace) -> int:
     profile = load_profile(args.board)
-    device = resolve_device(profile, args.role, args.device)
     baud = profile_baud(profile, args.baud)
-    deadline = time.monotonic() + args.timeout
-    with open_serial(device, baud, args.read_timeout) as ser:
-        while time.monotonic() < deadline:
-            data = ser.read(args.chunk_size)
-            if data:
-                append_log(args.log, data)
-                emit(data)
+    if not args.device and not args.role:
+        print("capture error: pass --role or --device", file=sys.stderr)
+        return 1
+    group = None
+    if not args.device:
+        groups = discover_adapter_groups()
+        group, error = select_adapter_group(groups, profile, args.adapter)
+        if error:
+            print(f"capture error: {error}", file=sys.stderr)
+            return 1
+    result = capture_role_loop(
+        profile=profile,
+        role=args.role or "explicit-device",
+        device=args.device,
+        group=group,
+        baud=baud,
+        log_path=args.log,
+        timeout=args.timeout,
+        read_timeout=args.read_timeout,
+        chunk_size=args.chunk_size,
+        reconnect=args.reconnect,
+        reconnect_interval=args.reconnect_interval,
+        tee=True,
+        expect_data=args.expect_data,
+    )
+    print(
+        f"\nserial-console: role={result['role']} state={result['state']} "
+        f"bytes={result['bytes']} reconnects={result['reconnects']}",
+        file=sys.stderr,
+    )
+    return int(result["status"])
+
+
+def cmd_capture_set(args: argparse.Namespace) -> int:
+    groups = discover_adapter_groups()
+    profile = load_profile(args.board) if args.board else None
+    group, selection_error = select_adapter_group(groups, profile, args.adapter)
+    if selection_error:
+        print(f"capture-set error: {selection_error}", file=sys.stderr)
+        print_adapter_groups(groups)
+        return 1
+    if profile is None:
+        profile = build_discovery_profile(group)
+
+    baud = profile_baud(profile, args.baud)
+    roles = args.role or default_capture_roles(profile)
+    log_dir = Path(args.log_dir)
+    name = args.name or time.strftime("%Y%m%d-%H%M%S")
+    log_dir.mkdir(parents=True, exist_ok=True)
+    expect_data = set(args.expect_data or [])
+    if args.require_data:
+        expect_data.update(roles)
+
+    unknown_roles = [role for role in roles if role not in get_ports(profile)]
+    if unknown_roles:
+        print(
+            f"capture-set error: unknown roles: {', '.join(unknown_roles)}",
+            file=sys.stderr,
+        )
+        return 1
+    invalid_expectations = sorted(expect_data - set(roles))
+    if invalid_expectations:
+        print(
+            "capture-set error: --expect-data roles are not selected: "
+            + ", ".join(invalid_expectations),
+            file=sys.stderr,
+        )
+        return 1
+
+    probe = probe_profile(profile, group)
+    if probe["errors"]:
+        for error in probe["errors"]:
+            print(f"capture-set error: {error}", file=sys.stderr)
+        return 1
+
+    if args.stop_modemmanager:
+        if stop_modemmanager():
+            return 1
+
+    if args.prepare:
+        for role in roles:
+            device = resolve_device(
+                profile,
+                role,
+                None,
+                group=group,
+                require_present=True,
+            )
+            code, output = stty_device(device, baud)
+            print(f"prepare {role}: {device}: stty exit={code}")
+            if output:
+                print(output)
+            if code:
+                print(f"capture-set error: prepare failed for {role}", file=sys.stderr)
+                return 1
+
+    results: dict[str, dict[str, Any]] = {}
+    threads: list[threading.Thread] = []
+    opened: dict[str, serial.Serial] = {}
+    devices: dict[str, str] = {}
+    session_started = time.strftime("%Y-%m-%dT%H:%M:%S%z")
+
+    try:
+        for role in roles:
+            device = resolve_device(
+                profile,
+                role,
+                None,
+                group=group,
+                require_present=True,
+            )
+            devices[role] = device
+            opened[role] = open_serial(device, baud, args.read_timeout)
+            print(f"opened {role}: {device}")
+    except (serial.SerialException, OSError, SystemExit) as exc:
+        for ser in opened.values():
+            try:
+                ser.close()
+            except (serial.SerialException, OSError):
+                pass
+        print(f"capture-set error: failed to open all roles: {exc}", file=sys.stderr)
+        return 1
+
+    start_event = threading.Event()
+
+    def run_role(role: str) -> None:
+        log_path = str(log_dir / f"{name}-{role}.log")
+        results[role] = capture_role_loop(
+            profile=profile,
+            role=role,
+            device=devices[role],
+            group=group,
+            baud=baud,
+            log_path=log_path,
+            timeout=args.timeout,
+            read_timeout=args.read_timeout,
+            chunk_size=args.chunk_size,
+            reconnect=not args.no_reconnect,
+            reconnect_interval=args.reconnect_interval,
+            tee=False,
+            expect_data=role in expect_data,
+            initial_serial=opened[role],
+            start_event=start_event,
+        )
+
+    for role in roles:
+        thread = threading.Thread(target=run_role, args=(role,), daemon=False)
+        thread.start()
+        threads.append(thread)
+
+    start_event.set()
+    if args.ready_file:
+        ready_path = Path(args.ready_file)
+        ready_path.parent.mkdir(parents=True, exist_ok=True)
+        ready_path.write_text(
+            f"board: {args.board or 'unclassified'}\n"
+            f"name: {name}\n"
+            f"roles: {','.join(roles)}\n",
+            encoding="utf-8",
+        )
+    print(
+        f"ALL PORTS READY: {', '.join(roles)}; capture is active",
+        flush=True,
+    )
+
+    for thread in threads:
+        thread.join()
+
+    summary_path = log_dir / f"{name}-serial-session.txt"
+    yaml_summary_path = log_dir / f"{name}-serial-session.yaml"
+    session_ended = time.strftime("%Y-%m-%dT%H:%M:%S%z")
+    session_data = {
+        "schema_version": 1,
+        "board": args.board or "unclassified",
+        "profile_status": profile.get("profile_status", "unknown"),
+        "adapter": {
+            "key": group.get("key", ""),
+            "serial": group.get("serial", ""),
+            "usb_id": group.get("usb_id", ""),
+            "interfaces": len(group.get("interfaces", [])),
+        },
+        "name": name,
+        "started": session_started,
+        "ended": session_ended,
+        "timeout": args.timeout,
+        "baud": baud,
+        "reconnect": not args.no_reconnect,
+        "roles": {role: results.get(role, {}) for role in roles},
+    }
+    with yaml_summary_path.open("w", encoding="utf-8") as handle:
+        yaml.safe_dump(session_data, handle, sort_keys=False, allow_unicode=False)
+
+    with summary_path.open("w", encoding="utf-8") as handle:
+        handle.write(f"board: {args.board or 'unclassified'}\n")
+        handle.write(f"profile_status: {profile.get('profile_status', 'unknown')}\n")
+        handle.write(f"name: {name}\n")
+        handle.write(f"started: {session_started}\n")
+        handle.write(f"ended: {session_ended}\n")
+        handle.write(f"timeout: {args.timeout}\n")
+        handle.write(f"baud: {baud}\n")
+        handle.write(f"reconnect: {not args.no_reconnect}\n")
+        for role in roles:
+            result = results.get(role, {})
+            handle.write("\n")
+            handle.write(f"[{role}]\n")
+            for key in (
+                "log",
+                "started",
+                "ended",
+                "opened_at",
+                "first_byte_at",
+                "last_device",
+                "bytes",
+                "opens",
+                "disconnects",
+                "reconnects",
+                "connected_at_end",
+                "expect_data",
+                "state",
+                "status",
+                "last_error",
+            ):
+                handle.write(f"{key}: {result.get(key, '')}\n")
+
+    print(f"summary: {summary_path}")
+    print(f"summary-yaml: {yaml_summary_path}")
+    for role in roles:
+        result = results.get(role, {})
+        print(
+            f"{role}: state={result.get('state')} status={result.get('status')} "
+            f"bytes={result.get('bytes')} "
+            f"reconnects={result.get('reconnects')} log={result.get('log')}"
+        )
+    statuses = [int(results.get(role, {}).get("status", 1)) for role in roles]
+    if any(status == 1 for status in statuses):
+        return 1
+    if any(status == 2 for status in statuses):
+        return 2
     return 0
 
 
 def cmd_send(args: argparse.Namespace) -> int:
     profile = load_profile(args.board)
-    device = resolve_device(profile, args.role, args.device)
+    group = None
+    if not args.device:
+        group, error = select_adapter_group(discover_adapter_groups(), profile, args.adapter)
+        if error:
+            raise SystemExit(error)
+    device = resolve_device(
+        profile,
+        args.role,
+        args.device,
+        group=group,
+        require_present=True,
+    )
     baud = profile_baud(profile, args.baud)
     with open_serial(device, baud, args.read_timeout) as ser:
         for command in args.cmd:
@@ -223,7 +1107,18 @@ def cmd_send(args: argparse.Namespace) -> int:
 
 def cmd_uboot_stop(args: argparse.Namespace) -> int:
     profile = load_profile(args.board)
-    device = resolve_device(profile, args.role, args.device)
+    group = None
+    if not args.device:
+        group, error = select_adapter_group(discover_adapter_groups(), profile, args.adapter)
+        if error:
+            raise SystemExit(error)
+    device = resolve_device(
+        profile,
+        args.role,
+        args.device,
+        group=group,
+        require_present=True,
+    )
     baud = profile_baud(profile, args.baud)
     trigger = args.trigger.encode()
     prompt_re = re.compile(args.prompt.encode())
@@ -255,7 +1150,18 @@ def cmd_uboot_stop(args: argparse.Namespace) -> int:
 
 def cmd_shell(args: argparse.Namespace) -> int:
     profile = load_profile(args.board)
-    device = resolve_device(profile, args.role, args.device)
+    group = None
+    if not args.device:
+        group, error = select_adapter_group(discover_adapter_groups(), profile, args.adapter)
+        if error:
+            raise SystemExit(error)
+    device = resolve_device(
+        profile,
+        args.role,
+        args.device,
+        group=group,
+        require_present=True,
+    )
     baud = profile_baud(profile, args.baud)
     old_attrs = termios.tcgetattr(sys.stdin)
     try:
@@ -282,6 +1188,7 @@ def add_common(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--board", required=True, help="board_knowledge board id")
     parser.add_argument("--role", help="serial role from board serial.yaml")
     parser.add_argument("--device", help="explicit serial device path")
+    parser.add_argument("--adapter", help="adapter sysfs key, USB serial, or VID:PID")
     parser.add_argument("--baud", type=int, help="override baudrate")
     parser.add_argument("--log", help="append raw serial data to this log file")
     parser.add_argument("--read-timeout", type=float, default=0.1)
@@ -297,9 +1204,15 @@ def build_parser() -> argparse.ArgumentParser:
     p_list.add_argument("--baud", type=int, help="override baudrate")
     p_list.set_defaults(func=cmd_list)
 
+    p_probe = sub.add_parser("probe", help="detect adapters and validate a board serial profile")
+    p_probe.add_argument("--board", help="optional board_knowledge board id")
+    p_probe.add_argument("--adapter", help="adapter sysfs key, USB serial, or VID:PID")
+    p_probe.set_defaults(func=cmd_probe)
+
     p_prepare = sub.add_parser("prepare", help="apply board serial stty settings")
     p_prepare.add_argument("--board", required=True)
     p_prepare.add_argument("--role", action="append", help="role to prepare; default: all roles")
+    p_prepare.add_argument("--adapter", help="adapter sysfs key, USB serial, or VID:PID")
     p_prepare.add_argument("--baud", type=int, help="override baudrate")
     p_prepare.add_argument("--stop-modemmanager", action="store_true")
     p_prepare.set_defaults(func=cmd_prepare)
@@ -307,7 +1220,29 @@ def build_parser() -> argparse.ArgumentParser:
     p_capture = sub.add_parser("capture", help="capture serial output")
     add_common(p_capture)
     p_capture.add_argument("--timeout", type=float, default=30.0)
+    p_capture.add_argument("--reconnect", action="store_true", help="reopen the serial port after USB disconnect")
+    p_capture.add_argument("--reconnect-interval", type=float, default=0.2)
+    p_capture.add_argument("--expect-data", action="store_true", help="return 2 if the capture is empty")
     p_capture.set_defaults(func=cmd_capture)
+
+    p_capture_set = sub.add_parser("capture-set", help="capture multiple board roles into separate logs")
+    p_capture_set.add_argument("--board", help="board profile; omit to capture one unclassified adapter")
+    p_capture_set.add_argument("--adapter", help="adapter sysfs key, USB serial, or VID:PID")
+    p_capture_set.add_argument("--role", action="append", help="role to capture; default comes from board profile")
+    p_capture_set.add_argument("--baud", type=int, help="override baudrate")
+    p_capture_set.add_argument("--log-dir", required=True)
+    p_capture_set.add_argument("--name", help="log filename prefix; default is a timestamp")
+    p_capture_set.add_argument("--timeout", type=float, default=90.0)
+    p_capture_set.add_argument("--read-timeout", type=float, default=0.1)
+    p_capture_set.add_argument("--chunk-size", type=int, default=512)
+    p_capture_set.add_argument("--reconnect-interval", type=float, default=0.2)
+    p_capture_set.add_argument("--no-reconnect", action="store_true")
+    p_capture_set.add_argument("--prepare", action="store_true")
+    p_capture_set.add_argument("--stop-modemmanager", action="store_true")
+    p_capture_set.add_argument("--expect-data", action="append", help="role that must receive at least one byte")
+    p_capture_set.add_argument("--require-data", action="store_true", help="require data on every selected role")
+    p_capture_set.add_argument("--ready-file", help="write this file after every selected port is open")
+    p_capture_set.set_defaults(func=cmd_capture_set)
 
     p_send = sub.add_parser("send", help="send commands to a serial port")
     add_common(p_send)

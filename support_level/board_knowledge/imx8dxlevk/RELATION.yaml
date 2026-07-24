@@ -1,0 +1,40 @@
+schema_version: 1
+id: imx8dxlevk
+type: board_profile
+human_doc: README.md
+owner: board-exec
+
+summary: i.MX8DXL EVK 板级事实入口，包含串口映射、手动复位规则、下载态识别和 SDPS/FB 阶段边界。
+
+relations:
+  projects: []
+  compile_targets: []
+  software_stacks: []
+  release_packages: []
+  boards: []
+  tools:
+    - bcu
+    - serial-console
+    - uuu
+
+case_required_for:
+  - uuu_first_stage
+  - uuu_second_stage
+  - serial_log_capture
+  - board_reset_or_boot_mode_change
+
+warnings:
+  - The manual-reset-only rule is scoped to imx8dxlevk and must not be inherited by i.MX93, i.MX943, or another board profile.
+  - On i.MX8DXL, BCU is allowed only for boot-mode selection; never use bcu reset usb, bcu reset sd, or other bcu reset variants.
+  - Prepare M4, A-core, and SCFW captures first, select the boot mode, then ask the user to press the physical RESET button.
+  - BCU reset can re-enumerate FT4232H and permanently lose early M4 or SCFW bytes, so a successful BCU return is not an acceptable substitute.
+  - SDPS to FB first-stage proof and existing FB second-stage writes are different observations.
+  - Serial silence alone does not prove board silence; check host serial setup and USB state.
+  - State-changing bcu and uuu actions require fresh probe before and after the action.
+
+evidence:
+  - README.md
+  - serial.yaml
+  - ../../tools/bcu/USAGE.md
+  - ../../tools/serial-console/USAGE.md
+  - ../../tools/uuu/USAGE.md

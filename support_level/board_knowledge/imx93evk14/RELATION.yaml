@@ -1,0 +1,35 @@
+schema_version: 1
+id: imx93evk14
+type: board_profile
+human_doc: README.md
+owner: board-exec
+
+summary: i.MX93 14x14 EVK 板级事实入口，覆盖镜像写入形态、FAT 文件替换和 M33 串口线索。
+
+relations:
+  projects: []
+  compile_targets: []
+  software_stacks: []
+  release_packages: []
+  boards: []
+  tools:
+    - serial-console
+    - uuu
+
+case_required_for:
+  - full_image_restore
+  - fat_file_write
+  - serial_log_capture
+  - mcore_runtime_probe
+
+warnings:
+  - Full image restore and FAT file replacement are different risk classes.
+  - Do not assume a universal Linux console from historical notes.
+  - Do not treat remoteproc stop as a default action.
+  - UUU transfer success does not prove Linux or M33 runtime success.
+
+evidence:
+  - README.md
+  - serial.yaml
+  - ../../tools/serial-console/USAGE.md
+  - ../../tools/uuu/USAGE.md

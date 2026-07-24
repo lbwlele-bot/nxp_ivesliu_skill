@@ -1,20 +1,46 @@
+schema_version: 2
 board: imx95evk19
-adapter: FT4232H Quad HS USB-UART/FIFO IC
+profile_status: partial
+adapter:
+  name: FT4232H Quad HS USB-UART/FIFO IC
+  interface_count: 4
 baudrate: 115200
 format: 8N1
 prefer_by_id: true
 ports:
   first-runtime:
+    order: 1
+    interface: if00
     by_id: usb-FTDI_Quad_RS232-HS-if00-port0
     tty: /dev/ttyUSB0
     description: First FTDI runtime port; can be hidden by ft_fta_sel after bcu -keep
+    default_capture: true
+    required: false
+    status: verified
   a55-rtos:
+    order: 3
+    interface: if02
     by_id: usb-FTDI_Quad_RS232-HS-if02-port0
     tty: /dev/ttyUSB2
     description: A55 RTOS log observed in local case evidence
+    log_sources:
+      - a55-rtos
+    default_capture: true
+    required: true
+    status: verified
   cm33-smfw:
+    order: 4
+    interface: if03
     by_id: usb-FTDI_Quad_RS232-HS-if03-port0
     tty: /dev/ttyUSB3
     description: CM33 or SMFW monitor observed in local case evidence
+    log_sources:
+      - cm33
+      - smfw
+    default_capture: true
+    required: true
+    status: verified
+notes:
+  - The role of if01 is not yet verified.
 host_hazards:
   - bcu reset with -keep can leave ft_fta_sel high and suppress first-runtime output.

@@ -1,81 +1,287 @@
 # serial-console
 
 - 程序入口：`./serial-console`
-- 工具角色：统一串口入口，负责列串口、按板型角色解析串口、抓 log、发命令、自动打断 `U-Boot`
+- 工具角色：i.MX 板卡统一串口探测、捕获和交互入口
 - 底层实现：`python3 + pyserial`
+- 板型事实：`../../board_knowledge/<board>/serial.yaml`
+- profile schema：`PROFILE_SCHEMA.md`
 
-## 使用边界
+## 设计边界
 
-`serial-console` 只负责串口工具能力，不保存板型事实。
+工具层负责：
 
-它读取：
+- 从 sysfs 识别 USB-UART 物理适配器
+- 把同一个适配器的 `if00/if01/...` 聚合并按接口顺序排列
+- 校验已知板型要求的接口数量和必要 role
+- 同时打开多个串口，全部成功后输出 `ALL PORTS READY`
+- 分路抓取日志、断线重连、记录捕获状态
+- 单路发送命令、打断 U-Boot、交互 shell
 
-```text
-../../board_knowledge/<board>/serial.yaml
+工具层不写死：
+
+- 第几个 COM 对应哪个核或固件
+- 某块板允许使用哪种 reset
+- 串口有输出是否足以证明板子进入某个运行阶段
+
+这些事实分别属于 `board_knowledge` 和 `board-exec`。
+
+## 设备识别
+
+不要把裸 `/dev/ttyUSB0` 当成稳定身份。
+
+工具优先级是：
+
+1. sysfs 中的 USB 物理设备和 interface number
+2. `/dev/serial/by-id/...ifNN-port0`
+3. profile 里的 `tty`，仅作为兼容 fallback
+
+### 检测当前所有串口适配器
+
+```bash
+./serial-console probe
 ```
 
-来解析：
+如果只有一个未知适配器，工具会列出它的接口顺序；如果有多个适配器，
+使用输出中的 sysfs key、USB serial 或 VID:PID 选择：
 
-- 哪个 role 对应哪一路串口
-- 默认 baudrate
-- 是否优先 `/dev/serial/by-id`
+```bash
+./serial-console probe --adapter <adapter-id>
+```
 
-具体板子的四口映射、默认 console、UART mux 风险、保留核约束，继续放在
-`board_knowledge/<board>/README.md` 和 `serial.yaml`，不要写进工具。
+### 校验已知板型
 
-## 常用命令
+```bash
+./serial-console probe --board imx8dxlevk
+```
 
-列出当前串口和某块板的 role 映射：
+检查内容包括：
+
+- 适配器 VID:PID
+- 预期接口数量
+- role 对应的 `ifNN`
+- 必要 role 是否存在
+- profile 是 `verified`、`partial` 还是 `unknown`
+
+必要端口缺失、接口数量不符或多个适配器无法消歧时返回非零。
+
+`list` 保留为兼容的人读枚举命令：
 
 ```bash
 ./serial-console list --board imx8dxlevk
 ```
 
-对某块板的所有已知 role 套用串口参数：
+## 准备串口
+
+对板型 profile 里的所有已知 role 重新设置串口参数：
 
 ```bash
-./serial-console prepare --board imx8dxlevk --stop-modemmanager
+./serial-console prepare \
+  --board imx8dxlevk \
+  --stop-modemmanager
 ```
 
-抓取某个 role 的串口日志：
+也可以只准备指定 role：
 
 ```bash
-./serial-console capture --board imx8dxlevk --role a-core --log logs/a-core.log --timeout 30
+./serial-console prepare \
+  --board imx8dxlevk \
+  --role m4 \
+  --role a-core
 ```
 
-发送命令并继续抓取短日志：
+`prepare` 只配置串口，不执行 reset。
+
+## 同时抓取必要串口
+
+已知板型默认读取 profile 中 `default_capture: true` 的 role：
 
 ```bash
-./serial-console send --board imx8dxlevk --role a-core --cmd 'printenv' --log logs/uboot.log
+./serial-console capture-set \
+  --board imx8dxlevk \
+  --log-dir logs \
+  --name sd-boot \
+  --timeout 90 \
+  --prepare \
+  --stop-modemmanager
 ```
 
-自动等待 `U-Boot` 三秒倒计时并发送回车：
+执行顺序固定为：
+
+1. 探测并校验物理适配器
+2. 校验必要 role
+3. 可选执行 `prepare`
+4. 打开所有选定串口
+5. 启动各路 reader
+6. 输出 `ALL PORTS READY: ...; capture is active`
+7. 由 `board-exec` 按板型规则安排 reset 或其它动作
+
+对 `imx8dxlevk`，默认抓取：
+
+- `m4`
+- `a-core`
+- `scfw`
+
+每次生成：
+
+```text
+logs/sd-boot-m4.log
+logs/sd-boot-a-core.log
+logs/sd-boot-scfw.log
+logs/sd-boot-serial-session.txt
+logs/sd-boot-serial-session.yaml
+```
+
+自动化流程可以使用 READY 文件：
 
 ```bash
-./serial-console uboot-stop --board imx8dxlevk --role a-core --log logs/uboot-stop.log
+./serial-console capture-set \
+  --board imx8dxlevk \
+  --log-dir logs \
+  --name sd-boot \
+  --ready-file state/serial.ready
+```
+
+READY 文件只在所有选定端口已经成功打开、reader 已经启动后写入。
+
+### 未知板型
+
+不传 `--board` 时，工具选择一个物理适配器并捕获它的全部接口：
+
+```bash
+./serial-console capture-set \
+  --log-dir logs \
+  --name discovery \
+  --timeout 60
+```
+
+日志 role 使用：
+
+```text
+port1
+port2
+port3
+...
+```
+
+工具不会根据输出内容猜测哪个是 Linux、M 核或系统控制固件。
+确认后的映射应由 case 证据进入对应板型的 `serial.yaml`。
+
+### 数据期望
+
+串口成功打开但没有数据时，session 状态是 `empty`，不是 `data`。
+
+要求某些 role 必须收到数据：
+
+```bash
+./serial-console capture-set \
+  --board imx8dxlevk \
+  --log-dir logs \
+  --expect-data m4 \
+  --expect-data a-core
+```
+
+要求全部选定 role 都有数据：
+
+```bash
+./serial-console capture-set \
+  --board imx8dxlevk \
+  --log-dir logs \
+  --require-data
+```
+
+退出码：
+
+- `0`：所有端口完成捕获；未声明数据期望的端口可以是 `empty`
+- `1`：探测、打开、配置、断线恢复或必要端口检查失败
+- `2`：声明必须有数据的 role 最终是 `empty`
+
+## 单路操作
+
+抓单路日志：
+
+```bash
+./serial-console capture \
+  --board imx8dxlevk \
+  --role a-core \
+  --log logs/a-core.log \
+  --timeout 30
+```
+
+要求单路必须收到数据并允许 USB 重新枚举后重连：
+
+```bash
+./serial-console capture \
+  --board imx8dxlevk \
+  --role m4 \
+  --log logs/m4.log \
+  --timeout 60 \
+  --reconnect \
+  --expect-data
+```
+
+发送命令：
+
+```bash
+./serial-console send \
+  --board imx8dxlevk \
+  --role a-core \
+  --cmd 'printenv' \
+  --log logs/uboot.log
+```
+
+打断 U-Boot：
+
+```bash
+./serial-console uboot-stop \
+  --board imx8dxlevk \
+  --role a-core \
+  --log logs/uboot-stop.log
 ```
 
 进入交互串口：
 
 ```bash
-./serial-console shell --board imx8dxlevk --role a-core --log logs/interactive.log
+./serial-console shell \
+  --board imx8dxlevk \
+  --role a-core \
+  --log logs/interactive.log
 ```
 
-交互模式用 `Ctrl-]` 退出。
+交互模式使用 `Ctrl-]` 退出。
 
-## 规则
+## 捕获状态
 
-- 默认优先使用 `board_knowledge/<board>/serial.yaml` 里的 role，不临场盲扫四个口
-- 优先 `/dev/serial/by-id/*`，没有 by-id 时才回退到 profile 里的 `tty`
-- `uboot-stop` 只在看到 `Hit any key to stop autoboot` 后发送回车
-- `capture` / `send` / `uboot-stop` 的原始输出应写到当前 case 的 `logs/`
-- `serial-console` 成功抓到或没抓到输出，都不单独证明板子状态；状态判断仍由 `board-exec` 结合 USB / 板控 / 串口证据完成
+每个 role 在 session 中有独立状态：
 
-## 板型事实位置
+- `data`：端口打开且收到数据
+- `empty`：端口打开，但捕获窗口内没有数据
+- `disconnected`：捕获结束时仍未恢复连接
+- `not-opened`：整个窗口内从未成功打开
 
-当前已知 profile：
+同时记录：
 
-- `../../board_knowledge/imx8dxlevk/serial.yaml`
-- `../../board_knowledge/imx93evk14/serial.yaml`
-- `../../board_knowledge/imx943evk19a0/serial.yaml`
-- `../../board_knowledge/imx95evk19/serial.yaml`
+- 第一次打开和第一字节时间
+- 接收字节数
+- 打开次数
+- 断线次数
+- 重连尝试次数
+- 捕获结束时是否仍连接
+- 最后一次错误
+
+`--reconnect` 只能恢复重新枚举后的继续捕获，不能找回物理断开期间已经输出的字节。
+
+## 板级规则
+
+- `serial.yaml` 只记录已验证映射；未确认接口保持未命名
+- `partial` profile 只使用已确认 role，不能补猜剩余接口
+- reset 方式不由串口工具决定
+- i.MX8DXL 当前必须先看到 `ALL PORTS READY`，再由用户手动按 RESET
+- i.MX93、i.MX943 等板不能继承 i.MX8DXL 的 reset 特例
+- 串口输出或静默都不能单独证明板状态，仍需 `board-exec` 结合 USB 和板控证据判断
+
+## 当前 profile
+
+- `../../board_knowledge/imx8dxlevk/serial.yaml`：完整已验证
+- `../../board_knowledge/imx93evk14/serial.yaml`：部分映射
+- `../../board_knowledge/imx943evk19a0/serial.yaml`：部分映射
+- `../../board_knowledge/imx95evk19/serial.yaml`：部分映射

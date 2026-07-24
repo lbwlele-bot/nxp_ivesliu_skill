@@ -1,21 +1,65 @@
+schema_version: 2
 board: imx8dxlevk
-adapter: FT4232H Quad HS USB-UART/FIFO IC
+profile_status: verified
+adapter:
+  name: FT4232H Quad HS USB-UART/FIFO IC
+  usb_id: "0403:6011"
+  interface_count: 4
 baudrate: 115200
 format: 8N1
 prefer_by_id: true
 ports:
+  first-com:
+    order: 1
+    interface: if00
+    by_id: usb-FTDI_Quad_RS232-HS-if00-port0
+    tty: /dev/ttyUSB0
+    description: First enumerated COM port; no default runtime log role currently assigned
+    default_capture: false
+    required: false
+    status: verified
   m4:
+    order: 2
+    interface: if01
     by_id: usb-FTDI_Quad_RS232-HS-if01-port0
     tty: /dev/ttyUSB1
-    description: M4 console
+    description: Second enumerated COM port; M4 console
+    log_sources:
+      - m4
+    default_capture: true
+    required: true
+    status: verified
   a-core:
+    order: 3
+    interface: if02
     by_id: usb-FTDI_Quad_RS232-HS-if02-port0
     tty: /dev/ttyUSB2
-    description: U-Boot, Fastboot, Linux early boot
+    description: Third enumerated COM port; U-Boot, Fastboot, Linux early boot
+    log_sources:
+      - spl
+      - u-boot
+      - fastboot
+      - linux
+    default_capture: true
+    required: true
+    status: verified
   scfw:
+    order: 4
+    interface: if03
     by_id: usb-FTDI_Quad_RS232-HS-if03-port0
     tty: /dev/ttyUSB3
-    description: SCFW console
+    description: Fourth enumerated COM port; SCFW console
+    log_sources:
+      - scfw
+    default_capture: true
+    required: true
+    status: verified
+evidence:
+  verified_at: "2026-07-24"
+  case: ../../work/2026-07-23-imx8dxl-power-mode-ocram-suspend
+  session: logs/v4-download-reset-serial-session.txt
 host_hazards:
   - ModemManager can disturb FT4232H ports.
   - ttyUSB0 and ttyUSB1 can silently fall back to 9600 after re-enumeration.
+  - Never use BCU reset on i.MX8DXL; it can re-enumerate FT4232H and permanently lose early M4 or SCFW bytes.
+  - Prepare all captures before boot-mode selection, then use the physical RESET button.

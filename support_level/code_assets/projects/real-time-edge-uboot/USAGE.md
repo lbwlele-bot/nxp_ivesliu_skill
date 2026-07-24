@@ -48,11 +48,10 @@
 确认源码版本和 defconfig 都匹配以后，直接构建形态仍类似 U-Boot：
 
 ```bash
-export ARCH=arm64
 export CROSS_COMPILE=/home/ives/桌面/NXP_v2/support_level/toolchain/arm-gnu-toolchain-14.3.rel1-x86_64-aarch64-none-linux-gnu/bin/aarch64-none-linux-gnu-
 
-make ARCH=arm64 CROSS_COMPILE=$CROSS_COMPILE O=build <defconfig>
-make ARCH=arm64 CROSS_COMPILE=$CROSS_COMPILE O=build -j$(nproc)
+make CROSS_COMPILE=$CROSS_COMPILE O=build <defconfig>
+make CROSS_COMPILE=$CROSS_COMPILE O=build -j$(nproc)
 ```
 
 具体 defconfig、产物名称和交给 `imx-mkimage` 的输入，必须按目标 SoC、

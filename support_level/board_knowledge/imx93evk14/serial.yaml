@@ -1,13 +1,24 @@
+schema_version: 2
 board: imx93evk14
-adapter: FTDI-style multi-port UART
+profile_status: partial
+adapter:
+  name: FTDI-style multi-port UART
 baudrate: 115200
 format: 8N1
 prefer_by_id: true
 ports:
   m33:
+    order: 4
+    interface: if03
     by_id: usb-FTDI_Quad_RS232-HS-if03-port0
     tty: /dev/ttyUSB3
     description: M33 console observed in local case evidence
+    log_sources:
+      - m33
+    default_capture: true
+    required: true
+    status: verified
 notes:
+  - The complete adapter interface count and the remaining interface roles are not yet verified.
   - Do not assume a universal Linux console from historical notes.
   - Identify the active console before sending state-changing commands.

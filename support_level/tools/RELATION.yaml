@@ -1,0 +1,28 @@
+schema_version: 1
+id: host_tools
+type: support_area
+human_doc: README.md
+owner: support
+
+summary: 主机侧长期工具入口，负责定位工具目录并下沉到具体工具 USAGE。
+
+relations:
+  projects: []
+  compile_targets: []
+  software_stacks: []
+  release_packages: []
+  boards: []
+  tools:
+    - serial-console
+    - uuu
+    - bcu
+    - imx-rm
+
+case_required_for: []
+
+warnings:
+  - Tool directories describe stable tool boundaries, not board-specific operation facts.
+  - State-changing tools must still be routed through board-exec when they affect a real board.
+
+evidence:
+  - README.md

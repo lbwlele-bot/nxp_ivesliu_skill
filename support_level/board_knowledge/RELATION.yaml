@@ -1,0 +1,32 @@
+schema_version: 1
+id: board_knowledge
+type: support_area
+human_doc: README.md
+owner: board-exec
+
+summary: 已验证板级操作知识入口，连接具体板型事实与板级执行工具。
+
+relations:
+  projects: []
+  compile_targets: []
+  software_stacks: []
+  release_packages: []
+  boards:
+    - imx8dxlevk
+    - imx93evk14
+    - imx943evk19a0
+    - imx95evk19
+  tools:
+    - serial-console
+    - uuu
+    - bcu
+
+case_required_for: []
+
+warnings:
+  - Board knowledge stores verified board facts, not guesses from manuals or one-off case noise.
+  - Tool usage belongs under support_level/tools; board-specific facts belong under board_knowledge/<board>/.
+  - Board state still requires fresh probe before and after state-changing actions.
+
+evidence:
+  - README.md

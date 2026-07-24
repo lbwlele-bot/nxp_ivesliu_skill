@@ -92,9 +92,19 @@ board_knowledge/
 
 `serial.yaml` 只放给 `tools/serial-console` 消费的串口事实：
 
+- profile 完整程度：`verified` / `partial` / `unknown`
+- 已验证适配器接口数量
+- USB interface 顺序，例如 `if00` / `if01`
 - 默认 baudrate
-- role 到 `/dev/serial/by-id/*` / `ttyUSB*` 的映射
+- role 到 interface / `/dev/serial/by-id/*` / `ttyUSB*` 的映射
+- 哪些 role 默认抓取、哪些是必要端口
+- 映射的 case 和 session 证据
 - 串口侧已验证风险
 
 串口工具的命令语义不写在这里；
-工具用法继续看 `../tools/serial-console/USAGE.md`。
+工具用法继续看 `../tools/serial-console/USAGE.md`，
+字段定义看 `../tools/serial-console/PROFILE_SCHEMA.md`。
+
+未完整确认的板必须标记为 `partial`。
+已知 role 可以直接复用，但不能因为当前插上了两个或四个串口，就给剩余接口
+补猜 Linux、M 核或系统控制固件角色。

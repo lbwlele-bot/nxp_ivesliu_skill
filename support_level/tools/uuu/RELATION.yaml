@@ -1,0 +1,51 @@
+schema_version: 1
+id: uuu
+type: host_tool
+human_doc: USAGE.md
+owner: board-exec
+
+summary: USB 下载和写入工具，负责下载态探测、原始启动镜像传输和 FAT 运行时文件写入。
+
+execution:
+  executable: ./1.5.243/uuu
+  required_prefix:
+    - sudo
+    - -n
+  unprivileged_fallback: forbidden
+
+relations:
+  projects: []
+  compile_targets:
+    - flashbin
+    - linux
+  software_stacks: []
+  release_packages: []
+  boards:
+    - imx8dxlevk
+    - imx93evk14
+    - imx943evk19a0
+    - imx95evk19
+  tools: []
+
+case_required_for:
+  - first_stage_write
+  - second_stage_write
+  - fat_write
+  - full_image_restore
+
+warnings:
+  - Every uuu invocation, including -lsusb and help, must use sudo -n.
+  - If sudo -n fails, stop and report the permission failure; never retry unprivileged.
+  - UUU success proves transfer or write at most; it does not prove U-Boot, Linux, or application runtime success.
+  - first-stage sd writes require evidence that the board is in serial download state.
+  - Reusing an existing FB session is not the same proof as SDPS to FB transition.
+  - Do not treat imx-mkimage boot images as FAT runtime files.
+
+evidence:
+  - USAGE.md
+  - ../../compile_targets/flashbin/README.md
+  - ../../compile_targets/linux/README.md
+  - ../../board_knowledge/imx8dxlevk/README.md
+  - ../../board_knowledge/imx93evk14/README.md
+  - ../../board_knowledge/imx943evk19a0/README.md
+  - ../../board_knowledge/imx95evk19/README.md

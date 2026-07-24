@@ -39,6 +39,18 @@
 - 由 `flashbin` 再选择合适的 `soc.mak` recipe，
   打出完整可烧写的 `flash.bin`
 
+## 已验证工具链注意事项
+
+`SDK_2_9_0_EVK-MIMX8DXL` 的 `power_mode_switch` readme 要求
+`GCC ARM Embedded 9.2.1`。本机已验证：
+
+- `gcc-arm-none-eabi-9-2019-q4-major` 可成功构建 `build_debug.sh`
+- `arm-gnu-toolchain-14.3.rel1-x86_64-arm-none-eabi` 会在
+  `devices/MIMX8DL1/utilities/fsl_sbrk.c` 报 `unknown type name 'caddr_t'`
+
+因此该 SDK 的 DXL demo 默认优先用旧 GCC 9.2.1 lane，
+不要为了“工具链更新”直接替换到 14.x。
+
 不要这样用：
 
 - 不要默认从 `../../code_assets/projects/mcuxsdk-core/` 直接起编译
