@@ -337,6 +337,45 @@ def interface_map(group: dict[str, Any] | None) -> dict[str, dict[str, Any]]:
     return {str(item["interface"]): item for item in group["interfaces"]}
 
 
+def profile_usb_interface_paths(
+    profile: dict[str, Any],
+    group: dict[str, Any],
+) -> dict[str, Path]:
+    adapter_path = Path(str(group.get("key") or ""))
+    if not adapter_path.is_absolute():
+        return {}
+    result: dict[str, Path] = {}
+    for entry in get_ports(profile).values():
+        interface = port_interface(entry)
+        if not interface:
+            continue
+        index = int(interface[2:], 16)
+        result[interface] = adapter_path / f"{adapter_path.name}:1.{index}"
+    return result
+
+
+def unbound_profile_interfaces(
+    profile: dict[str, Any],
+    group: dict[str, Any],
+) -> dict[str, Path]:
+    return {
+        interface: path
+        for interface, path in profile_usb_interface_paths(profile, group).items()
+        if path.is_dir() and not (path / "driver").exists()
+    }
+
+
+def bound_usb_driver(group: dict[str, Any]) -> Path | None:
+    adapter_path = Path(str(group.get("key") or ""))
+    if not adapter_path.is_absolute():
+        return None
+    for interface_path in sorted(adapter_path.glob(f"{adapter_path.name}:1.*")):
+        driver_link = interface_path / "driver"
+        if driver_link.exists():
+            return driver_link.resolve()
+    return None
+
+
 def resolve_device(
     profile: dict[str, Any],
     role: str | None,
@@ -476,8 +515,15 @@ def probe_profile(
     if expected_count is not None and actual_count != int(expected_count):
         result["errors"].append(
             f"adapter interface count mismatch: expected {expected_count}, detected {actual_count}; "
-            "do not run board-control and serial tools concurrently, wait for udev, then re-probe"
+            "wait for udev, inspect driver binding, then re-probe"
         )
+        unbound = sorted(unbound_profile_interfaces(profile, group))
+        if unbound:
+            result["warnings"].append(
+                "physical USB interfaces exist but have no serial driver: "
+                + ", ".join(unbound)
+                + "; run serial-console recover with sudo"
+            )
 
     detected = interface_map(group)
     for role, entry in get_ports(profile).items():
@@ -771,6 +817,44 @@ def cmd_probe(args: argparse.Namespace) -> int:
     for error in result["errors"]:
         print(f"error: {error}", file=sys.stderr)
     return 1 if result["errors"] else 0
+
+
+def cmd_recover(args: argparse.Namespace) -> int:
+    if os.geteuid() != 0:
+        print(
+            "recover error: run this subcommand with sudo -n",
+            file=sys.stderr,
+        )
+        return 1
+
+    profile = load_profile(args.board)
+    groups = discover_adapter_groups()
+    group, error = select_adapter_group(groups, profile, args.adapter)
+    if error:
+        print(f"recover error: {error}", file=sys.stderr)
+        return 1
+
+    unbound = unbound_profile_interfaces(profile, group)
+    if not unbound:
+        print("recover: no unbound profile interfaces")
+        return 0
+
+    driver = bound_usb_driver(group)
+    if driver is None or not (driver / "bind").exists():
+        print("recover error: cannot identify the sibling USB serial driver", file=sys.stderr)
+        return 1
+
+    status = 0
+    for interface, interface_path in sorted(unbound.items()):
+        try:
+            (driver / "bind").write_text(interface_path.name, encoding="ascii")
+            print(f"recover: bound {interface} ({interface_path.name}) to {driver.name}")
+        except OSError as exc:
+            print(f"recover error: failed to bind {interface}: {exc}", file=sys.stderr)
+            status = 1
+
+    subprocess.run(["udevadm", "settle"], check=False)
+    return status
 
 
 def stty_device(device: str, baud: int) -> tuple[int, str]:
@@ -1257,6 +1341,14 @@ def build_parser() -> argparse.ArgumentParser:
     p_probe.add_argument("--board", help="optional board_knowledge board id")
     p_probe.add_argument("--adapter", help="adapter sysfs key, USB serial, or VID:PID")
     p_probe.set_defaults(func=cmd_probe)
+
+    p_recover = sub.add_parser(
+        "recover",
+        help="rebind unbound USB serial interfaces declared by a board profile",
+    )
+    p_recover.add_argument("--board", required=True)
+    p_recover.add_argument("--adapter", help="adapter sysfs key, USB serial, or VID:PID")
+    p_recover.set_defaults(func=cmd_recover)
 
     p_prepare = sub.add_parser("prepare", help="apply board serial stty settings")
     p_prepare.add_argument("--board", required=True)

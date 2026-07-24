@@ -114,7 +114,7 @@ class SerialConsoleTests(unittest.TestCase):
             ["m4", "a-core", "scfw"],
         )
 
-    def test_partial_profile_does_not_invent_unverified_roles(self) -> None:
+    def test_verified_imx93_profile_maps_all_four_interfaces(self) -> None:
         profile = serial_console.load_profile("imx93evk14")
         groups = serial_console.group_serial_interfaces(four_port_records())
 
@@ -122,9 +122,15 @@ class SerialConsoleTests(unittest.TestCase):
         probe = serial_console.probe_profile(profile, group)
 
         self.assertEqual(error, "")
-        self.assertEqual([port["role"] for port in probe["ports"]], ["m33"])
-        self.assertTrue(probe["ports"][0]["present"])
-        self.assertIn("profile is partial", probe["warnings"][0])
+        self.assertEqual(probe["errors"], [])
+        self.assertEqual(
+            [port["role"] for port in probe["ports"]],
+            ["first-com", "second-com", "a-core", "m33"],
+        )
+        self.assertEqual(
+            serial_console.default_capture_roles(profile),
+            ["a-core", "m33"],
+        )
 
     def test_unclassified_adapter_uses_ordered_port_names(self) -> None:
         group = serial_console.group_serial_interfaces(four_port_records())[0]
@@ -137,6 +143,25 @@ class SerialConsoleTests(unittest.TestCase):
             ["port1", "port2", "port3", "port4"],
         )
         self.assertTrue(all(port["status"] == "unknown" for port in profile["ports"].values()))
+
+    def test_detects_unbound_physical_profile_interface(self) -> None:
+        profile = serial_console.load_profile("imx93evk14")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            adapter = Path(temp_dir) / "3-1"
+            adapter.mkdir()
+            for index in range(4):
+                (adapter / f"3-1:1.{index}").mkdir()
+            (adapter / "3-1:1.0/driver").symlink_to(adapter)
+            (adapter / "3-1:1.2/driver").symlink_to(adapter)
+            (adapter / "3-1:1.3/driver").symlink_to(adapter)
+            group = {
+                "key": str(adapter),
+                "interfaces": [],
+            }
+
+            unbound = serial_console.unbound_profile_interfaces(profile, group)
+
+            self.assertEqual(list(unbound), ["if01"])
 
     def test_missing_required_dxl_role_fails_probe(self) -> None:
         profile = serial_console.load_profile("imx8dxlevk")

@@ -158,6 +158,25 @@ READY 文件是活动状态标记，不是历史结果：
 `SIGTERM`；工具会通知各 reader 停止、删除 READY，并照常生成 session
 summary。不要使用 `SIGKILL` 结束正常捕获。
 
+### BCU 后恢复缺失 interface
+
+部分板卡的 BCU 会临时接管 FTDI interface，退出后可能没有把该 interface
+重新绑定给 Linux 串口驱动。此时 `probe` 会同时看到：
+
+- profile 预期四个 interface，但只检测到三个
+- 对应物理 USB interface 仍存在，但没有 serial driver
+
+使用显式恢复命令：
+
+```bash
+sudo -n ./serial-console recover --board imx93evk14
+./serial-console probe --board imx93evk14
+```
+
+`recover` 只处理当前 board profile 声明、物理存在且 driver 未绑定的
+interface，并复用同一适配器其它 interface 已绑定的 driver。它不 reset
+板子，也不改变 boot mode。
+
 ### 未知板型
 
 不传 `--board` 时，工具选择一个物理适配器并捕获它的全部接口：

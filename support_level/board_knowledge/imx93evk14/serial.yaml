@@ -1,12 +1,45 @@
 schema_version: 2
 board: imx93evk14
-profile_status: partial
+profile_status: verified
 adapter:
-  name: FTDI-style multi-port UART
+  name: FT4232H Quad HS USB-UART/FIFO IC
+  usb_id: "0403:6011"
+  interface_count: 4
 baudrate: 115200
 format: 8N1
 prefer_by_id: true
 ports:
+  first-com:
+    order: 1
+    interface: if00
+    by_id: usb-FTDI_Quad_RS232-HS-if00-port0
+    tty: /dev/ttyUSB0
+    description: First enumerated COM port; no default runtime log role assigned
+    default_capture: false
+    required: false
+    status: verified
+  second-com:
+    order: 2
+    interface: if01
+    by_id: usb-FTDI_Quad_RS232-HS-if01-port0
+    tty: /dev/ttyUSB1
+    description: Second enumerated COM port; used by BCU control and no default runtime log role assigned
+    default_capture: false
+    required: false
+    status: verified
+  a-core:
+    order: 3
+    interface: if02
+    by_id: usb-FTDI_Quad_RS232-HS-if02-port0
+    tty: /dev/ttyUSB2
+    description: Third enumerated COM port; SPL, U-Boot and Linux console
+    log_sources:
+      - spl
+      - u-boot
+      - linux
+    default_capture: true
+    required: true
+    status: verified
   m33:
     order: 4
     interface: if03
@@ -19,6 +52,6 @@ ports:
     required: true
     status: verified
 notes:
-  - The complete adapter interface count and the remaining interface roles are not yet verified.
-  - Do not assume a universal Linux console from historical notes.
-  - Identify the active console before sending state-changing commands.
+  - The adapter exposes four COM interfaces in fixed if00-if03 order.
+  - BCU reset can leave if01 physically present but detached from ftdi_sio.
+  - Capture a-core and m33 during BCU reset; recover if01 after BCU exits.

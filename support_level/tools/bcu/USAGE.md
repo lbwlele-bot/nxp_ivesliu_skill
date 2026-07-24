@@ -53,9 +53,11 @@ sudo -n ./bcu set_gpio <GPIO_NAME> 0 -board=<board>
 
 - `bcu` 是板控工具，不是运行态验证工具
 - `bcu` 能改变板状态，执行前必须先明确当前状态和目标状态
-- 不与 `serial-console` 并发运行；部分板卡的 BCU 与 UART 共用 FTDI 设备，
-  并发访问会造成串口 interface 暂时缺失。BCU 退出后等待 udev 稳定，再做
-  串口 fresh probe；具体等待和完整性判据以板级知识为准
+- BCU 与串口是否并发由板级知识决定，不能把某块板的限制传播到其它板：
+  DXL 当前禁止并发并使用人工 reset；i.MX93 可以先捕获实际日志口再用 BCU
+  reset
+- 部分板卡的 BCU 与串口共用 FTDI；BCU 退出后要做串口 fresh probe。
+  如果物理 interface 存在但未绑定驱动，使用 `serial-console recover`
 - `bcu` 文档这里只写工具稳定边界；具体到哪块板怎么用，要去对应板级知识
 - `bcu` 的一个重要价值是把板子拉回可控态，但是否把它当默认恢复动作，取决于具体板型的已验证工作流
 
