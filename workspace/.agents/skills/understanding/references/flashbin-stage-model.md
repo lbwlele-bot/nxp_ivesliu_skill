@@ -1,128 +1,114 @@
-# `flash.bin` stage model
+# `flash.bin` artifact, transport and runtime model
 
-## 读完后要带走什么
+## 核心结论
 
-遇到 `flash.bin` / `uuu` 问题时，不要先把它当成“文件在哪”或“命令怎么敲”。
+`flash.bin` 是 boot image 产物，不是一个独立完成阶段切换的主动 owner。
 
-先把问题拆成三层：
+一次下载、写入或启动的真实语义由下面几项共同决定：
 
-- artifact：这个产物是什么，由谁生成
-- transport：它通过什么通道被送进板子
-- runtime：它把系统带到哪个运行阶段，由谁继续接管
+- `flash.bin` 内部包含什么组件
+- 当前设备处在哪个 ROM / USB / boot 阶段
+- 使用的传输工具和 recipe 做什么
+- 目标是临时下载执行还是写入持久介质
+- image 中的下一阶段软件启动后提供什么能力
 
-这三层没拆开时，后面的 `compile` 和 `board-exec` 很容易互相背锅。
+因此不能只看到文件名或一条 UUU 命令，
+就直接判断板子一定会进入 U-Boot、Fastboot 或最终系统。
 
-## 核心模型：`flash.bin` 是阶段切换载体
+## 四个独立问题
 
-不要把 `flash.bin` 仅仅理解成“一个待烧录文件”。
+### 1. Artifact identity
 
-更准确地说，`flash.bin` 往往同时承担几种角色：
+先确认产物自身：
 
-- boot-firmware 组件打包产物
-- ROM 下载阶段的入口载体
-- 把板子带到 `U-Boot` / `Fastboot` 能力的前置基线
-- 后续更多写入动作能够成立的前提
+- 由哪个源码版本和 recipe 生成
+- 面向哪个 SoC、silicon revision、板型和 DDR
+- 包含哪些 boot firmware、U-Boot、M 核 payload 或其它组件
+- 是已验证基线、case-local 修改，还是来源不明的旧产物
 
-所以讨论 `flash.bin` 时，先问的不是“这个文件在哪”，而是：
+artifact identity 只说明“这个文件是什么”，
+不说明当前设备会如何消费它。
 
-- 这个 `flash.bin` 由谁消费
-- 它把系统从哪个阶段带到哪个阶段
-- 它建立的是“最终运行态”，还是“下一阶段的可操作态”
+### 2. Transport action
 
-## `sudo -n uuu -b sd <flash.bin>` 常见含义
+再确认本次传输动作：
 
-在很多 lane 里，第一次：
+- 工具当前匹配了哪个 USB 协议阶段
+- recipe 会下载执行、写入存储，还是复用已有 Fastboot 会话
+- 目标介质和写入位置是什么
+- 当前动作是否依赖已经运行的 U-Boot/Fastboot
 
-```bash
-sudo -n <uuu-path> -b sd <flash.bin>
+transport 成功只证明对应传输或写入动作成立，
+不自动证明 image 能独立启动。
+
+### 3. Current device stage
+
+同一条 recipe 在不同设备阶段可能有不同语义。
+
+常见阶段包括：
+
+- ROM download / `SDPS`
+- 二级下载阶段 / `SDPV`
+- U-Boot Fastboot / `FB`
+- U-Boot shell
+- 已进入操作系统
+
+第一次从 ROM 下载态开始的动作，
+和已经存在 Fastboot 会话时再次执行写入，
+不是同一个观察点，也不能互相替代证明。
+
+### 4. Runtime result
+
+最后确认运行结果：
+
+- 哪个组件真正开始执行
+- 是否只是建立了下一阶段可操作能力
+- 是否从目标介质完成冷启动
+- U-Boot、Linux、M 核或业务 payload 是否按预期接管
+
+runtime 结论必须来自运行态证据，
+不能只从 transport 返回值推出。
+
+## 常见两阶段链路
+
+某些 i.MX 上板流程会表现为：
+
+```text
+ROM download
+  -> 下载并执行一个包含 U-Boot/Fastboot 能力的 boot image
+  -> 建立当前 Fastboot 会话
+  -> 复用该会话执行后续写入
+  -> 从目标介质重新启动并验证运行态
 ```
 
-它的重要意义不只是把某个镜像写进去，
-而是把板子从：
+这是特定 image 内容、设备阶段和传输 recipe 共同形成的链路，
+不是所有 `flash.bin` 或所有 UUU 调用的固有语义。
 
-- `SDPS`
+## 证据边界
 
-带到：
+| 现象 | 能直接证明 | 不能自动证明 |
+|------|------------|--------------|
+| `flash.bin` 文件存在 | 有一个候选 artifact | 版本、内容和目标板匹配 |
+| 构建成功 | 构建流程产生了文件 | 板上可以运行 |
+| UUU 返回成功 | 对应传输或写入动作完成 | 最终 runtime 正常 |
+| 设备进入 Fastboot | 当前 Fastboot relay 可用 | 写入内容可以独立冷启动 |
+| 串口出现 U-Boot | U-Boot 已执行到可观察阶段 | Linux 或业务 payload 正常 |
+| 从目标介质冷启动成功 | boot image 的主要启动链成立 | 所有异构核和业务功能正常 |
 
-- `U-Boot`
-- `Fastboot`
-- 或至少是一个可继续通过 `FB` 操作的状态
+## 路由
 
-所以第一次 `sudo -n <uuu-path> -b sd` 的真正价值，经常是：
+根据当前 unresolved step：
 
-- 建立可继续烧录的运行时 relay
-
-而不是“这一次就已经完成了所有最终内容”。
-
-## 第一轮和第二轮 `uuu` 不一定语义相同
-
-当第一次 `sudo -n <uuu-path> -b sd flash.bin` 已经把板子带到了 live
-`Fastboot` session，
-那么第二次：
-
-```bash
-sudo -n <uuu-path> -b sd <another-flash-image>
-```
-
-之所以还能成功，
-往往依赖的是：
-
-- 第一次建立起来的 `U-Boot/Fastboot` 会话还活着
-
-而不一定依赖：
-
-- 第二个镜像本身再次提供完整 `U-Boot`
-
-这意味着：
-
-- 同样是 `sudo -n <uuu-path> -b sd`
-- 第一次和第二次的语义并不相同
-
-第一次更像：
-
-- `ROM/SDPS -> U-Boot/Fastboot`
-
-第二次更像：
-
-- `reuse existing Fastboot session for another write`
-
-## 证据强度
-
-一个产物至少有三种身份：
-
-- artifact identity：它是什么打包产物
-- transport identity：它通过什么通道被送进去
-- runtime identity：它最终由谁接管、在哪个阶段生效
-
-同一个 `flash.bin`：
-
-- 在 `uuu` 看来，可能只是一个 raw boot image input
-- 在 ROM 看来，是下载入口
-- 在 `U-Boot/Fastboot` 语境里，可能是建立后续 relay 的基础
-- 在最终运行链里，又可能只是更大运行结构里的起点
-
-所以不能从“文件名一样”直接推出“运行角色一样”。
-
-常见现象的证明强度：
-
-| 现象 | 通常只能证明 | 不能自动证明 |
-|------|--------------|--------------|
-| `uuu` 返回成功 | transport 动作完成 | 最终 runtime 正常 |
-| 串口出现 `U-Boot` | stage 切到了 `U-Boot` | Linux 或业务 payload 正常 |
-| 进入 `FB` / Fastboot | relay 可用 | 写入内容已经能独立启动 |
-| 镜像被写入存储 | 写入动作完成 | owner 已经接管运行 |
-
-## 读完后怎么路由
-
-根据当前 unresolved step 选择下游：
-
-- 需要找现成 `flash.bin`、固件、脚本、日志、版本来源：进 `support`
-- 需要生成或重打包 `flash.bin` / boot-firmware：进 `compile`
-- 需要让板子从 `SDPS` 进 `U-Boot` / `FB` / 写入 / 启动验证：进 `board-exec`
+- 查 artifact 来源、版本、现成基线和日志：`support`
+- 生成或重打包 boot image：`compile`
+- 探测当前 USB 阶段、执行传输、写入和启动验证：`board-exec`
+- artifact、transport、device stage 和 runtime 仍被混淆：
+  继续由 `understanding` 拆分问题
 
 ## 常见误判
 
-- 把“`uuu` 成功”当成“系统已经能运行”
-- 把“同名 `flash.bin`”当成“同一个运行角色”
-- 把“写进存储”当成“下一阶段 owner 已经接管”
-- 忘了区分第一次 `uuu` 建立 relay 和后续 `uuu` 复用 relay
+- 把 `flash.bin` 当成运行时 owner
+- 只根据文件名判断内部组件
+- 把 UUU 成功当成最终启动成功
+- 把现有 Fastboot 会话中的写入当成从 ROM 阶段重新验证
+- 忽略目标板、revision、DDR 和 image recipe 的身份差异

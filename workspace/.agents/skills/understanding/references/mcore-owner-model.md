@@ -1,58 +1,123 @@
-# `M` core owner model
+# `M` core loading and lifecycle model
 
-## 读完后要带走什么
+## 核心结论
 
-遇到 `M` 核 / 异构核问题时，第一问不是“镜像有没有烧进去”，也不是“命令怎么敲”。
+M 核问题不能压缩成一个单一 owner。
 
-第一问是：
+至少要分别确认：
 
-- 这次谁拥有 `M` 核启动动作
+1. payload 被放在哪里
+2. 谁负责加载并启动
+3. 谁负责后续生命周期和资源管理
+4. M 核运行后与其它处理器遵守什么通信和内存契约
 
-owner 没分清之前，不要直接决定是改 boot-firmware、敲 `bootaux`，还是查 Linux `remoteproc`。
+这四项可以由不同组件承担，不能互相替代。
 
-## owner 分层
+## 四个独立维度
 
-| owner layer | 典型信号 | 主要问题归属 |
-|-------------|----------|--------------|
-| `flash.bin` / boot-firmware | M 核 payload 被早期 boot flow 打包或带起 | boot-firmware 打包、启动链、早期资源分配 |
-| `U-Boot` | `bootaux`、U-Boot 命令、U-Boot 阶段加载 payload | U-Boot 环境、加载地址、payload 格式 |
-| Linux | `remoteproc`、`rproc`、firmware name、resource table | Linux driver、firmware 搜索路径、资源表、内存 carveout |
+### 1. Packaging carrier
 
-同一个 M 核 binary，在不同 owner layer 下不是同一个问题。
+描述 payload 作为 artifact 被放在哪里，例如：
 
-## owner 会改变什么
+- 被打包进 boot image / `flash.bin`
+- 放在存储分区或文件系统
+- 由 U-Boot 从某个地址或文件读取
+- 作为 Linux firmware 文件提供
 
-owner layer 会直接改变：
+packaging carrier 不是运行时 owner，
+也不能单独证明 payload 会被加载或启动。
 
-- 产物应该怎么打包
-- binary 放在哪里
-- 是否需要 resource table
-- 哪个阶段负责加载
-- 验证点应该看串口、U-Boot 变量，还是 Linux sysfs / dmesg
-- 失败时优先查 boot-firmware、U-Boot，还是 Linux runtime
+### 2. Loader / starter
 
-所以“M 核起不来”不是单一问题，而是 owner 还没分类。
+描述谁实际把 payload 放入目标内存并发起启动，例如：
 
-## 证据强度
+- early boot flow
+- U-Boot
+- Linux remoteproc
+- 板型特有的系统控制固件或启动机制
 
-| 现象 | 通常只能证明 | 不能自动证明 |
-|------|--------------|--------------|
-| binary 存在 | artifact 准备好了 | owner 会加载它 |
-| `bootaux` 执行过 | U-Boot 发起过启动动作 | M 核运行逻辑正确 |
-| Linux 下看到 `remoteproc` 节点 | Linux 有管理入口 | firmware 已加载并正常跑 |
-| M 核串口有输出 | 某阶段已成功带起 M 核 | owner layer 一定是 Linux 或 U-Boot |
+要区分“payload 已经在 image 中”和“某个阶段确实启动了目标核”。
 
-## 读完后怎么路由
+### 3. Lifecycle and resource manager
 
-根据 owner 分类选择下游：
+描述运行期间谁负责：
 
-- 需要找 M 核 binary、board 文档、已有日志、固件路径：进 `support`
-- 需要生成 M 核 payload、重打包 boot-firmware、准备 resource table：进 `compile`
-- 需要执行 `bootaux`、观察串口、操作 Linux `remoteproc`、确认当前核是否允许触碰：进 `board-exec`
+- 核的 start / stop / reset / suspend / resume
+- power domain 和 clock
+- memory region 和 peripheral ownership
+- interrupt 和 wakeup route
+- 与系统控制固件的资源协调
 
-## 必须先问清的问题
+loader 和 lifecycle manager 不一定是同一个组件。
+某些责任还可能分散在 Linux、ATF、SCFW/SMFW 和 M 核 firmware 之间。
 
-1. 这次目标是哪颗 M 核或哪类辅助核
-2. 当前 case 里哪些核是保留核，哪些核允许触碰
-3. 期望 owner 是 boot-firmware、U-Boot，还是 Linux
-4. 当前证据只证明 artifact、transport、还是 runtime
+### 4. Runtime contract
+
+描述 M 核运行后与 A 核或其它组件之间的契约，例如：
+
+- RPMsg / virtio / MU
+- resource table
+- vring 和 shared memory
+- device address 与 system address
+- cache、MPU、DMA 和内存属性
+- notification、interrupt 和 wakeup
+
+runtime contract 是否存在、如何实现，
+不由 loader 路径单独决定。
+
+例如：
+
+```text
+M 核 payload 被打包进 flash.bin
+-> early boot flow 启动 M 核
+-> Linux 不负责加载 M 核
+-> Linux 和 M 核仍通过 resource table、RPMsg 和 shared memory 协作
+```
+
+因此“不是 Linux remoteproc 加载”不能推出“不需要 resource table”。
+
+## 建立问题身份
+
+开始修改或执行前，至少回答：
+
+- 目标是哪颗 M 核或辅助核
+- 当前板型有哪些保留核，哪些核允许当前 case 使用
+- payload 的版本、链接地址和运行内存是什么
+- packaging carrier 是什么
+- loader / starter 是谁
+- lifecycle 和资源分别由谁管理
+- runtime contract 包含哪些通信、地址和内存约束
+- 当前观察证明了 artifact、loading、running 还是 communication
+
+如果其中一项未知，应把它保留为未知，
+不要用另一个维度的事实代替。
+
+## 证据边界
+
+| 现象 | 能直接证明 | 不能自动证明 |
+|------|------------|--------------|
+| binary 文件存在 | payload artifact 存在 | 已被打包、加载或启动 |
+| payload 出现在 boot image 中 | packaging 成立 | 目标核已运行 |
+| 启动命令返回成功 | 某个 starter 发起过动作 | firmware 主逻辑正常 |
+| Linux 出现 remoteproc 节点 | Linux 有管理入口 | 当前 payload 由 Linux 加载 |
+| M 核串口有输出 | M 核执行到可观察位置 | 通信和资源契约正常 |
+| RPMsg channel 出现 | 部分 runtime contract 已建立 | suspend/resume 等生命周期正常 |
+| resume 后通信仍正常 | 当前周期的生命周期和通信恢复成立 | 所有低功耗路径都成立 |
+
+## 路由
+
+根据当前 unresolved step：
+
+- 查 payload、板型约束、已有日志和固件来源：`support`
+- 构建 payload、修改链接、打包 boot image 或实现运行契约：`compile`
+- 执行加载启动、观察串口、操作 remoteproc 或验证运行态：`board-exec`
+- 四个维度仍被混为一个 owner：
+  继续由 `understanding` 拆分问题
+
+## 常见误判
+
+- 把 `flash.bin` 当成 M 核运行时 owner
+- 把 packaging 成功当成 loading 或 running 成功
+- 根据 loader 路径推断是否需要 resource table
+- 看到串口输出就认为 RPMsg、资源权限和低功耗路径都正常
+- 未确认保留核和板级资源边界就尝试接管目标核

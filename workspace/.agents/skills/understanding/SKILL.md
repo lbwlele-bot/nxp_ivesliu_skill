@@ -1,120 +1,140 @@
 ---
 name: understanding
-description: Use when starting an NXP i.MX workspace task or when a problem involves conceptual owner routing, flash.bin/uuu stage semantics, transport vs runtime, M core owner layers, or state-transition evidence before choosing support, compile, or board-exec.
+description: NXP i.MX 工作区的高阶理解入口。所有任务开工先读，用于应用全局执行原则、澄清当前现象的证据边界、拆分尚未分清的问题本质，并在问题具体化后路由到 support、compile 或 board-exec。
 ---
 
 # 理解入口层
 
+## 核心职责
+
+`understanding` 是当前四个主 owner 之一，不只是一个跳转页。
+
+它负责：
+
+- 持有所有 case 默认遵守的高级执行原则
+- 判断当前现象直接证明什么、不能证明什么
+- 在问题本质尚未分清时拆开概念和责任边界
+- 问题具体化以后，把当前 unresolved step 路由到正确下游
+
+它不负责资源路径、具体构建配方、工具命令或真实板级动作。
+
 ## 使用方式
 
-这里是必读入口页，但不是知识大全。
+所有 NXP i.MX 工作区任务开工先读本入口。
 
-开工后先读这一页，用它判断：
+读完后按当前 unresolved step 处理：
 
-- 当前问题属于哪个阶段
-- 当前现象是在证明什么
-- 当前 owner 应该落在哪一层
-- 是否必须继续读取某个 `references/*.md`
-
-读这一页之后只能有两种结果：
-
-- 命中下方主题触发条件：必须继续读对应 reference，再决定下游 owner
-- 未命中任何主题：立刻转到 `support`、`compile` 或 `board-exec`
+1. 问题本质仍不清楚：
+   由 `understanding` 继续负责；命中主题时按需读取对应 reference，
+   得出概念结论后再判断是否需要下游
+2. 只缺资源位置、已有资产或文档入口：
+   转到 `support`
+3. 只缺构建对象、依赖集合或产物：
+   转到 `compile`
+4. 已经要触碰真实板子、USB、串口、boot mode、烧写或运行态：
+   转到 `board-exec`
+5. 同时涉及多个阶段：
+   只按当前最先需要解决的 unresolved step 选择 owner，
+   完成后再显式交接，不预设一次走完整链路
 
 不要因为读了入口页，就把整个 `references/` 目录都放进上下文。
 
-## 基准优先原则
+## 全局执行原则
 
-处理任何调试、移植、定制或问题复现任务时，
+### 基准优先
+
+处理调试、移植、定制或问题复现任务时，
 先建立当前环境下最小、可信、可重复的运行基准，
 再引入目标改动。
 
 - 对当前版本明确支持的 release demo、标准镜像、默认配置和已验证产物，
   优先把它们视为参考基准
 - 在基准尚未跑通前，不为迎合当前现象而修改原本应当工作的逻辑
-- 基准失败时，先检查版本、板型、构建、打包、加载、权限、工具和观察链路，
-  不直接假设默认实现存在逻辑错误
-- 基准成立后，每次只引入完成目标所必需的最小变化，
-  并保留修改前后的 A/B 证据
-- 已验证正常的层保持不动；问题定位沿证据逐层收敛，
-  不因某个现象不明确就同时怀疑和修改所有层
+- 基准失败时，先检查版本、板型、构建、打包、加载、权限、工具和观察链路
+- 基准成立后，每次只引入完成目标所必需的最小变化，并保留 A/B 证据
+- 已验证正常的层保持不动；问题定位沿证据逐层收敛
 
 release demo 不是绝对不会有缺陷，
 但修改它的默认逻辑必须建立在明确证据上，
 不能作为 bring-up 失败时的第一反应。
 
-如果当前任务无法建立原始基准，
-应明确记录原因和缺失条件，
-不能把未经验证的状态当作基准继续向下修改。
-
-简化成一句话：
+如果原始基准无法建立，
+明确记录缺失条件和原因，
+不把未经验证的状态当作基准继续修改。
 
 > 先证明参考系统，再改变参考系统；先建立基准，再解释差异。
 
-## 这里不做什么
+### 证据边界
 
-- 路径索引
-- 命令清单
-- 板级 recipe
-- 具体编译步骤
-- 资源位置查询
-- 普通工具用法说明
+每个观察都要分清：
 
-这些分别交给：
+- 直接观察到了什么
+- 这个观察能够证明什么
+- 它不能自动证明什么
+- 下一条最小证据是什么
 
-- `support`
-- `compile`
-- `board-exec`
-- 具体目录 README / 工具 `USAGE.md`
+命令返回成功、文件存在、串口静默和某一阶段出现日志，
+都只能证明各自局部事实，不能自动推出整条运行链成立。
 
-## 主题路由表
+### 最小增量
 
-### `flash.bin` / `uuu` / transport vs runtime
+- 一次只改变当前目标必需的层和变量
+- 不用修改已知正常逻辑来补偿尚未确认的环境问题
+- 出现回归时先回到最近已验证基准做 A/B
+- 没有证据指向业务逻辑时，先检查观察链、输入身份和阶段边界
 
-触发条件：
+## 主题路由
 
-- 问题涉及 `flash.bin`、boot-firmware、`uuu -b sd`
-- 现象里出现 `SDPS`、`FB`、Fastboot relay、下载态到 `U-Boot` 的阶段切换
-- 用户或日志把“传输成功”“烧写成功”“运行态成功”混在一起
-- 同名产物在不同阶段扮演的角色不清楚
+### `flash.bin`：产物、传输和运行阶段边界
 
-命中后必须读：
+只有出现下列语义歧义时才读取：
+
+- 不清楚当前讨论的是打包产物、传输动作还是运行结果
+- 同一个 `flash.bin` 在不同 USB/boot 阶段中的作用被混为一谈
+- 把 UUU 成功、写入成功、进入 Fastboot 或最终启动成功互相等同
+- 不清楚当前设备阶段和 UUU recipe 如何共同决定实际动作
+
+命中后读取：
 
 - `references/flashbin-stage-model.md`
 
-读完后再决定进入：
+如果只是执行已经明确的 UUU 动作，直接进入 `board-exec`；
+如果只是构建已明确的 boot image，直接进入 `compile`。
 
-- `support`
-- `compile`
-- `board-exec`
+### `M` 核：打包、加载、生命周期和运行契约
 
-### `M` 核 / 异构核 owner 分层
+只有出现下列语义歧义时才读取：
 
-触发条件：
+- 把 payload 放在哪里和谁负责加载启动混为一谈
+- 不清楚谁负责启动、停止、恢复或资源管理
+- 把 `flash.bin`、`bootaux`、Linux remoteproc 当成互斥的单一 owner
+- 不清楚 RPMsg、resource table、shared memory 等运行契约与加载路径的关系
 
-- 问题涉及 `M` 核、`bootaux`、`remoteproc`、`rproc`
-- 需要判断某个 payload 由 `flash.bin`、`U-Boot` 还是 Linux 接手
-- 需要判断哪些核是保留核、哪些核属于当前 case 目标
-- 现象看起来像“镜像在不在”，但真正问题可能是 owner layer 不清楚
-
-命中后必须读：
+命中后读取：
 
 - `references/mcore-owner-model.md`
 
-读完后再决定进入：
+如果目标核、加载路径和运行契约已经明确，
+按当前 unresolved step 直接进入 `support`、`compile` 或 `board-exec`。
 
-- `support`
-- `compile`
-- `board-exec`
+## 下游边界
+
+- 资源、资产、路径、文档和已有基线位置：`support`
+- 构建对象、输入依赖、编译和打包：`compile`
+- 真实板状态、USB、串口、板控、烧写、启动和运行态：`board-exec`
+- 工具参数和具体命令：对应工具 `USAGE.md`，并由当前 owner 执行
+
+`understanding` 可以直接完成高阶概念分析，
+但不越过下游 owner 执行它们负责的动作。
 
 ## 维护规则
 
-新增理解如果足够重要，也优先拆成按需主题文档，
-不要继续堆回这个入口页。
+入口页可以保留：
 
-入口页只保留：
+- 所有 case 都必须遵守的高级执行原则
+- understanding 自身的 owner 边界
+- 主题名称、语义触发条件和 reference 路由
 
-- 主题名称
-- 触发条件
-- 必读 reference
-- 读完后可能进入的下游 owner
+具体 SoC 事实、板级特例、工具命令、构建 recipe 和长篇技术细节，
+继续放到对应 reference、skill、README 或 `USAGE.md`，
+不要堆进入口页。
