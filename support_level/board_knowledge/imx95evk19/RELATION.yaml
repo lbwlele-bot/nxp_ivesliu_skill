@@ -27,12 +27,14 @@ case_required_for:
 warnings:
   - Silicon revision is blocking when it affects OEI, firmware blobs, or imx-mkimage REV.
   - bcu reset with -keep can leave ft_fta_sel high and suppress first-runtime output.
+  - Follow the packaged imx95evk19 serial profile; if01 remains unverified and must not be guessed.
   - USB hub failures must not be treated as image or packaging evidence.
   - RTE and generic Linux flash.bin routes must remain explicit.
 
 evidence:
   - README.md
-  - serial.yaml
   - ../../tools/serial-console/USAGE.md
+  - ../../tools/serial-console/profiles/imx95evk19/README.md
+  - ../../tools/serial-console/profiles/imx95evk19/serial.yaml
   - ../../tools/uuu/USAGE.md
   - ../../tools/bcu/USAGE.md

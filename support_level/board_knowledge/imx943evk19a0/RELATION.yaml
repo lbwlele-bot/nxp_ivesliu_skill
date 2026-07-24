@@ -28,15 +28,14 @@ warnings:
   - bcu is a strong board-state signal for this board, but it does not prove runtime success.
   - Confirm A0 versus B1 from FTDI EEPROM before reset; the profiles require opposite SW7-1 settings.
   - On the current A0 specimen, BCU GPIO access and reset fail even with SW7-1 ON; use physical power cycle until that path is repaired.
-  - BCU hardware access can leave if01 unbound; recover it and require all four interfaces in a fresh probe.
+  - Follow the packaged imx943evk19a0 serial profile for onboard interface roles and BCU channel 1 recovery.
   - m33_0 is a reserved SMFW core and must not be treated as a free case target.
-  - ttyUSB3 is not the default Linux shell.
-  - External application M-core UART adapters are separate from the on-board four-interface FT4232H profile.
   - Reset, uuu success, or serial silence cannot skip the boot-stage probe.
 
 evidence:
   - README.md
-  - serial.yaml
   - ../../tools/serial-console/USAGE.md
+  - ../../tools/serial-console/profiles/imx943evk19a0/README.md
+  - ../../tools/serial-console/profiles/imx943evk19a0/serial.yaml
   - ../../tools/uuu/USAGE.md
   - ../../tools/bcu/USAGE.md

@@ -87,20 +87,13 @@
 - 当前已知可用的标准 demo：
   `imx93-14x14-evk_m33_TCM_power_mode_switch.bin`
 - 历史已知 `U-Boot` 路径可以通过 `bootaux` 带起 M33
-- 本地 case 证据里，M33 console 曾出现在 `ttyUSB3`
-- 机器可读串口映射见：
-  `serial.yaml`
+- M33 console 的已验证映射见：
+  `../../tools/serial-console/profiles/imx93evk14/README.md`
 - 不要把 `remoteproc stop` 当成通用默认动作
 
-## 串口与 BCU reset
+## BCU Reset
 
 2026-07-24 在当前 i.MX93 14x14 LPDDR4x EVK 上重新验证：
-
-- FT4232H 固定枚举四个 COM：`if00-if03`
-- 第三个 COM，`if02` / `ttyUSB2`：SPL、U-Boot、Linux console
-- 第四个 COM，`if03` / `ttyUSB3`：M33 console
-- 前两个 COM 当前不分配默认运行日志 role；`if01` 同时被 BCU 板控使用
-- 默认抓取 `a-core` 和 `m33`，不盲抓全部四个接口
 
 这块板允许 BCU reset，不继承 i.MX8DXL 的 manual-reset-only 特例：
 
@@ -108,24 +101,10 @@
 sudo -n ../../tools/bcu/bcu reset -board=imx93evk14
 ```
 
-当前实测 BCU reset 连续 3/3 次在退出后留下未绑定的 `if01`。
-只读 `get_boot_mode` 也会产生同样结果，而不访问板卡的 `bcu version`
-不会影响绑定。板子和 A-core/M33 日志口不因此失效，但 fresh probe 会
-只看到三个 COM。恢复：
+BCU 对 channel 1 的串口影响、四路 role、默认捕获组合和恢复命令统一见：
 
-```bash
-sudo -n ../../tools/serial-console/serial-console recover --board imx93evk14
-../../tools/serial-console/serial-console probe --board imx93evk14
-```
-
-恢复后必须重新看到 `if00-if03` 四个 interface。不要写 EEPROM 来规避该
-主机驱动绑定问题。
-
-BCU 二进制动态链接 `libftdi1` / `libusb`，并把板控 I2C 路径固定到
-`ft4232h_i2c{channel=1...}`。USB ioctl 跟踪确认硬件访问会在 FT4232H
-设备上执行 `GETDRIVER`、driver disconnect 和 `CLAIMINTERFACE`，退出时
-没有恢复 `if01` 的 `ftdi_sio` 绑定。因此这里的根因是 BCU 接管板控
-channel 后的主机驱动清理缺口，不是板级 reset 导致整个 FT4232H 消失。
+- `../../tools/serial-console/profiles/imx93evk14/README.md`
+- `../../tools/bcu/USAGE.md`
 
 ## 交接边界
 

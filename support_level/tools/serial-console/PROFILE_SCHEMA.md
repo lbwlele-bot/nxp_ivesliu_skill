@@ -3,11 +3,12 @@
 板型串口 profile 位于：
 
 ```text
-support_level/board_knowledge/<board>/serial.yaml
+support_level/tools/serial-console/profiles/<board>/serial.yaml
 ```
 
-profile 只保存板级串口事实。串口探测、捕获和交互逻辑属于
-`support_level/tools/serial-console/serial-console`。
+profile 随工具一起发布，只保存板级串口事实。串口探测、捕获和交互逻辑属于
+同目录的 `serial-console`，串口专属的人读说明属于
+`profiles/<board>/README.md`。
 
 ## Schema 2
 
@@ -41,7 +42,7 @@ ports:
 
 evidence:
   verified_at: "2026-07-24"
-  case: ../../work/<case>
+  case: ../../../../work/<case>
   session: logs/<session>
 ```
 
@@ -107,7 +108,7 @@ evidence:
 2. 按 `port1/port2/...` 保存全部原始日志
 3. 由用户确认板型和 role
 4. 在 case 中保留证据
-5. 再更新 `serial.yaml`
+5. 再更新 `profiles/<board>/serial.yaml`
 
 ## Reset 边界
 
@@ -118,6 +119,9 @@ reset 能力属于板型和实物：
 - i.MX8DXL 当前是 manual-reset-only
 - 其它板必须按各自板级知识并与用户确认
 - 某块板的 reset 结论不得传播到其它 SoC 或 EVK
+
+profile 的 `README.md` 可以记录 reset 对串口捕获顺序造成的直接影响，但
+`serial-console` 不调用 BCU、UUU 或板级 reset。
 
 ## Schema 1 兼容
 

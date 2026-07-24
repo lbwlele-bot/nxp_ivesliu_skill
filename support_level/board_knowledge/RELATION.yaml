@@ -25,7 +25,8 @@ case_required_for: []
 
 warnings:
   - Board knowledge stores verified board facts, not guesses from manuals or one-off case noise.
-  - Tool usage belongs under support_level/tools; board-specific facts belong under board_knowledge/<board>/.
+  - Tool usage belongs under support_level/tools; serial-specific board facts are packaged under tools/serial-console/profiles.
+  - Non-serial board facts belong under board_knowledge/<board>/.
   - Board state still requires fresh probe before and after state-changing actions.
 
 evidence:

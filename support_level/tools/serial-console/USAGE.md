@@ -3,7 +3,8 @@
 - 程序入口：`./serial-console`
 - 工具角色：i.MX 板卡统一串口探测、捕获和交互入口
 - 底层实现：`python3 + pyserial`
-- 板型事实：`../../board_knowledge/<board>/serial.yaml`
+- 板型事实：`profiles/<board>/serial.yaml`
+- 板型串口说明：`profiles/<board>/README.md`
 - profile schema：`PROFILE_SCHEMA.md`
 
 ## 设计边界
@@ -12,6 +13,7 @@
 
 - 从 sysfs 识别 USB-UART 物理适配器
 - 把同一个适配器的 `if00/if01/...` 聚合并按接口顺序排列
+- 从工具包内的 `profiles/` 读取板型串口事实
 - 校验已知板型要求的接口数量和必要 role
 - 同时打开多个串口，全部成功后输出 `ALL PORTS READY`
 - 分路抓取日志、断线重连、记录捕获状态
@@ -23,7 +25,8 @@
 - 某块板允许使用哪种 reset
 - 串口有输出是否足以证明板子进入某个运行阶段
 
-这些事实分别属于 `board_knowledge` 和 `board-exec`。
+串口 role 和串口侧风险属于随工具发布的 board profile；完整 reset 能力、
+boot mode 和运行阶段判断仍分别属于板级知识和 `board-exec`。
 
 ## 设备识别
 
@@ -198,7 +201,7 @@ port3
 ```
 
 工具不会根据输出内容猜测哪个是 Linux、M 核或系统控制固件。
-确认后的映射应由 case 证据进入对应板型的 `serial.yaml`。
+确认后的映射应由 case 证据进入 `profiles/<board>/serial.yaml`。
 
 ### 数据期望
 
@@ -309,13 +312,17 @@ port3
 - `serial.yaml` 只记录已验证映射；未确认接口保持未命名
 - `partial` profile 只使用已确认 role，不能补猜剩余接口
 - reset 方式不由串口工具决定
-- i.MX8DXL 当前必须先看到 `ALL PORTS READY`，再由用户手动按 RESET
+- i.MX8DXL 如使用 BCU 切 boot mode，必须先让 BCU 退出，再恢复 `if01`；
+  fresh probe 完整后启动捕获，看到 `ALL PORTS READY` 才由用户手动按 RESET
 - i.MX93、i.MX943 等板不能继承 i.MX8DXL 的 reset 特例
 - 串口输出或静默都不能单独证明板状态，仍需 `board-exec` 结合 USB 和板控证据判断
 
 ## 当前 profile
 
-- `../../board_knowledge/imx8dxlevk/serial.yaml`：完整已验证
-- `../../board_knowledge/imx93evk14/serial.yaml`：部分映射
-- `../../board_knowledge/imx943evk19a0/serial.yaml`：部分映射
-- `../../board_knowledge/imx95evk19/serial.yaml`：部分映射
+- `profiles/imx8dxlevk/serial.yaml`：完整已验证
+- `profiles/imx93evk14/serial.yaml`：完整已验证
+- `profiles/imx943evk19a0/serial.yaml`：完整已验证
+- `profiles/imx95evk19/serial.yaml`：部分映射
+
+工具目录包含程序、profile、板型串口说明、schema 和测试。发布时应整体打包
+`serial-console/`，不得只复制入口脚本。

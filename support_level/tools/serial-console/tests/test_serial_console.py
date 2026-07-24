@@ -55,6 +55,21 @@ class FakeSerial:
 
 
 class SerialConsoleTests(unittest.TestCase):
+    def test_packaged_profiles_are_self_contained_and_valid(self) -> None:
+        self.assertEqual(serial_console.PROFILE_ROOT.parent, TOOL_PATH.parent)
+        profile_dirs = sorted(
+            path.name
+            for path in serial_console.PROFILE_ROOT.iterdir()
+            if path.is_dir()
+        )
+        self.assertEqual(
+            profile_dirs,
+            ["imx8dxlevk", "imx93evk14", "imx943evk19a0", "imx95evk19"],
+        )
+        for board in profile_dirs:
+            profile = serial_console.load_profile(board)
+            self.assertEqual(profile["board"], board)
+
     def test_sysfs_discovery_groups_interfaces_by_physical_adapter(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

@@ -119,7 +119,12 @@ support_level/
     <board>/
       README.md
       RELATION.yaml
-      serial.yaml
+  tools/
+    serial-console/
+      profiles/
+        <board>/
+          README.md
+          serial.yaml
 ```
 
 不是所有目录第一天都必须有 `RELATION.yaml`。

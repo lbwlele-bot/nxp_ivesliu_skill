@@ -10,22 +10,10 @@
 
 ## 默认识别
 
-- 已验证 UART 适配器：
-  `0403:6011 FT4232H`
-- 机器可读串口映射：
-  `serial.yaml`
-- 已验证串口顺序：
-  - 第 1 个 COM / `if00` / 通常 `ttyUSB0`：未作为当前默认运行日志口
-  - 第 2 个 COM / `if01` / 通常 `ttyUSB1`：`M4`
-  - 第 3 个 COM / `if02` / 通常 `ttyUSB2`：`U-Boot` / `Fastboot` / Linux early boot
-  - 第 4 个 COM / `if03` / 通常 `ttyUSB3`：`SCFW`
-- 已验证串口参数：
-  `115200 8N1`
-
-这里优先按 FT4232H 的 interface 顺序记忆和核对串口角色。
-Linux 的裸 `ttyUSB*` 编号通常会和这个顺序一致，
-但实操时仍优先用 `/dev/serial/by-id/...ifNN-port0`，
-避免重新枚举后编号漂移。
+- 已验证 UART 映射、默认捕获组合和 BCU channel 1 冲突统一见：
+  `../../tools/serial-console/profiles/imx8dxlevk/README.md`
+- 机器可读 profile：
+  `../../tools/serial-console/profiles/imx8dxlevk/serial.yaml`
 
 ## 下载态识别
 
@@ -48,18 +36,16 @@ Linux 的裸 `ttyUSB*` 编号通常会和这个顺序一致，
 - 当前允许的 BCU 命令只用于切 boot mode：
   - `sudo -n bcu init usb -board=imx8dxlevk`
   - `sudo -n bcu init sd -board=imx8dxlevk`
-- BCU 和 `serial-console` 必须串行执行，不能并发 probe、prepare 或 capture。
-  2026-07-24 实测并发探测连续 5/5 次只枚举到三个 FT4232H interface，
-  固定丢失 `if01/M4`；BCU 结束后串口独占探测连续 5/5 次恢复四个 interface。
-- BCU 命令结束后先执行 `udevadm settle` 并短暂等待，再做串口 fresh probe；
-  只有 `if00-if03` 四个 interface 完整出现后才能开始捕获或要求用户 reset。
+- BCU 与 DXL M4 console 共用 FT4232H `if01`；具体恢复和捕获顺序由
+  `serial-console` 的 DXL profile 维护。
 - i.MX8DXL 当前流程禁止使用 `bcu reset usb`、`bcu reset sd`
   或其它 `bcu reset` 变体。
 - reset owner 固定为用户：
-  先准备 M4/A-core/SCFW 三路串口捕获，再由用户手动按板上 RESET。
-- 原因不是 `bcu reset` 命令一定返回失败，而是该动作会使 FT4232H
-  串口短暂断开和重新枚举，早期 M4/SCFW 字节无法找回，并会让后续
-  board-state 判断反复建立在不完整日志上。
+  BCU 完成 boot-mode 操作并退出后，恢复串口、准备三路捕获，再由用户
+  手动按板上 RESET。
+- 原因不是 DXL 板本身的 USB 串口不稳定。当前 BCU 固定接管 FT4232H
+  channel 1，而该 interface 恰好承载 DXL M4 日志；使用 BCU reset 会让
+  关键早期证据无法可靠捕获。
 - 这块板的 EEPROM 当前为空，`bcu` 会提示可写 EEPROM；
   `bcu eeprom -w -board=imx8dxlevk` 属于长期配置动作，需用户明确同意。
 - 对旧板或未复测板，仍不要自动套用本条 BCU 结论。
@@ -70,26 +56,6 @@ Linux 的裸 `ttyUSB*` 编号通常会和这个顺序一致，
   3. 已验证的 UART 现场证据
 - 不要把 `bcu` 成功返回单独当作运行态证明；
   手动 reset 后仍需用 USB 枚举和串口 fresh probe 判断当前阶段。
-
-## 已验证的主机侧串口纪律
-
-对日志敏感的操作：
-
-- 使用统一工具：
-  `../../tools/serial-console/serial-console`
-- 优先 `/dev/serial/by-id/...`
-  而不是裸 `ttyUSB*`
-- 先停 `ModemManager`
-- 先把 FT4232H 四个口都重新强制回 `115200 8N1 raw`
-- 不与 BCU 并发；BCU 完成、udev settle 后重新确认四个 interface
-- 等待用户手动 reset 的交互式捕获使用足够长的等待窗口；启动日志抓全后
-  用 Ctrl-C 或 SIGTERM 让工具正常生成 session summary，不用 SIGKILL
-- 第一条从全新 `SDPS` 开始的 `uuu -b sd` 之前，就应先把日志采集准备好
-
-高风险误区：
-
-- `ttyUSB*` 安静，不等于板子安静
-- 如果 Windows 能看到 log、本机看不到，先查本机串口层
 
 ## M 核加载路径偏好
 
@@ -181,22 +147,11 @@ first-stage A1 regression flash.bin: SDPS -> FB
 
 完成当前 case 要求的 boot image 和 FAT 文件写入后：
 
-- 先准备 M4、A-core、SCFW 三路捕获
 - BCU 只切到 SD boot mode
+- BCU 退出后按 DXL serial profile 恢复 `if01` 并确认四路完整
+- 准备 M4、A-core、SCFW 三路捕获
 - 用户手动按板上 RESET
 - 再用 USB 枚举和三路运行日志验证实际启动结果
-
-## 已验证的主机侧坑点
-
-- `ModemManager` 会干扰 FT4232H 端口
-- `ttyUSB0` / `ttyUSB1` 可能静默掉回 `9600`
-- 不使用 BCU reset。该动作会使 FT4232H 串口短暂重新枚举；
-  `--reconnect` 只能恢复后续抓取，无法找回物理断开期间已经输出的
-  M4/SCFW 早期字节。
-- 固定顺序是：先打开三路捕获，切换目标 boot mode，再由用户手动按
-  板上 RESET。
-- 如果另一台机器能看到日志，本机看不到，
-  先查主机串口层，不要先怪镜像
 
 ## 当前 B0 LPDDR4 EVK 复测记录
 
@@ -206,16 +161,14 @@ first-stage A1 regression flash.bin: SDPS -> FB
 - 历史测试曾证明 `bcu reset usb/sd` 能改变板状态，但该结论只保留为
   工具能力证据；自 2026-07-24 起不再作为 i.MX8DXL 操作 recipe。
 - 当前 recipe 为 `bcu init usb/sd` 只切模式，随后用户手动按 RESET。
-- 第 2 个 COM / `if01` / `ttyUSB1` 抓到 M4 输出：
-  `RPMSG Link is up!`
-- 第 3 个 COM / `if02` / `ttyUSB2` 抓到 SPL、U-Boot、Linux 和 login prompt
-- 第 4 个 COM / `if03` / `ttyUSB3` 抓到 SCFW banner
+- 三路串口的映射和现场输出证据已经迁入 DXL serial profile。
 
 SCFW 编译与第 4 个 COM：
 
 - 当前 `scfw_export_mx8dxl_a0` porting kit 需基于它自带的 A0
   预编译对象链接，不能把空的 `R=B0` 输出目录当作完整源码包重建。
-- 需传 `D=1 U=2`；`U=2` 选择 `LPUART_SC` / `if03` / 第 4 个 COM。
+- 需传 `D=1 U=2`；`U=2` 选择已由 serial profile 标识为 `scfw` 的
+  `LPUART_SC`。
 - 只传 `D=1` 不够；`U` 默认为 `0`，该路径下
   `board_get_debug_uart()` 返回 `NULL`，SCFW 可以正常启动但串口无输出。
 - B0 芯片的硬约束仍是 imx-mkimage `REV=B0` 和

@@ -25,15 +25,14 @@ case_required_for:
 
 warnings:
   - Full image restore and FAT file replacement are different risk classes.
-  - Do not assume a universal Linux console from historical notes.
   - Do not treat remoteproc stop as a default action.
   - This board supports BCU reset; do not inherit the i.MX8DXL manual-reset-only rule.
-  - BCU reset can leave if01 unbound from ftdi_sio; run serial-console recover and require all four interfaces afterward.
-  - The third COM is the A-core console and the fourth COM is the M33 console.
+  - Follow the packaged imx93evk14 serial profile for interface roles and BCU channel 1 recovery.
   - UUU transfer success does not prove Linux or M33 runtime success.
 
 evidence:
   - README.md
-  - serial.yaml
   - ../../tools/serial-console/USAGE.md
+  - ../../tools/serial-console/profiles/imx93evk14/README.md
+  - ../../tools/serial-console/profiles/imx93evk14/serial.yaml
   - ../../tools/uuu/USAGE.md

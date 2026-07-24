@@ -51,6 +51,10 @@ ports:
     default_capture: true
     required: true
     status: verified
+evidence:
+  verified_at: "2026-07-24"
+  case: ../../../../work/2026-07-24-imx93evk14-serial-console-validation
+  session: logs/profile-bcu-reset-serial-session.yaml
 notes:
   - The adapter exposes four COM interfaces in fixed if00-if03 order.
   - BCU hardware access through FT4232H channel 1, including get_boot_mode and reset, can leave if01 detached from ftdi_sio.

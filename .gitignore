@@ -82,16 +82,12 @@ support_level/board_knowledge/imx93evk14/*
 support_level/board_knowledge/imx943evk19a0/*
 support_level/board_knowledge/imx95evk19/*
 !support_level/board_knowledge/imx8dxlevk/README.md
-!support_level/board_knowledge/imx8dxlevk/serial.yaml
 !support_level/board_knowledge/imx8dxlevk/RELATION.yaml
 !support_level/board_knowledge/imx93evk14/README.md
-!support_level/board_knowledge/imx93evk14/serial.yaml
 !support_level/board_knowledge/imx93evk14/RELATION.yaml
 !support_level/board_knowledge/imx943evk19a0/README.md
-!support_level/board_knowledge/imx943evk19a0/serial.yaml
 !support_level/board_knowledge/imx943evk19a0/RELATION.yaml
 !support_level/board_knowledge/imx95evk19/README.md
-!support_level/board_knowledge/imx95evk19/serial.yaml
 !support_level/board_knowledge/imx95evk19/RELATION.yaml
 
 support_level/firmware/*
@@ -238,6 +234,8 @@ support_level/tools/uuu/*
 !support_level/tools/serial-console/PROFILE_SCHEMA.md
 !support_level/tools/serial-console/RELATION.yaml
 !support_level/tools/serial-console/serial-console
+!support_level/tools/serial-console/profiles/
+!support_level/tools/serial-console/profiles/**
 !support_level/tools/serial-console/tests/
 support_level/tools/serial-console/tests/*
 !support_level/tools/serial-console/tests/test_serial_console.py

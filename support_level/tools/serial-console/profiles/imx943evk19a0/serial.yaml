@@ -31,6 +31,8 @@ ports:
     tty: /dev/ttyUSB2
     description: Default U-Boot and Linux console
     log_sources:
+      - spl
+      - bl31
       - u-boot
       - linux
     default_capture: true
@@ -47,10 +49,14 @@ ports:
     default_capture: true
     required: true
     status: verified
+evidence:
+  verified_at: "2026-07-24"
+  case: ../../../../work/2026-07-24-imx943evk19a0-serial-console-validation
+  session: logs/physical-power-cycle-serial-session.yaml
 notes:
   - The on-board FT4232H exposes four fixed interfaces in if00-if03 order.
   - The attached adapter has a per-board serial number, so runtime resolution uses usb_id plus interface instead of a hard-coded by-id basename.
   - External application M-core UART adapters were not connected during this validation and are not part of this four-interface profile.
-  - BCU hardware access can leave if01 detached from ftdi_sio; run serial-console recover after BCU exits.
+  - BCU hardware access uses FT4232H channel 1 and can leave if01 detached from ftdi_sio; run serial-console recover after BCU exits.
   - ttyUSB3 is not the default Linux shell.
   - Prefer the a-core role for U-Boot stop and Linux login unless live evidence overrides it.

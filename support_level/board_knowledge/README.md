@@ -23,9 +23,7 @@
 
 只放已经被现场验证过、下次很可能还会直接复用的内容，例如：
 
-- 某块板默认主 console 是哪个串口
 - 某块板进入下载态时，`uuu -lsusb` 会看到什么
-- 某块板常见的 USB/串口枚举顺序
 - 某块板已经验证过的启动模式切换顺序
 - 某块板实测有效的烧写前提和恢复前提
 - 某块板对 `serial download` / `U-Boot` / `Linux-ready` 的默认判定入口
@@ -73,7 +71,6 @@ board_knowledge/
 
 每块板的 `README.md` 里优先放：
 
-- 默认串口认知
 - 默认 USB 下载态认知
 - 已验证的基础进入方式
 - 已验证的操作前提
@@ -81,29 +78,25 @@ board_knowledge/
 - 已验证的启动阶段判断边界
 - 已验证的上板写入 -> 启动 -> 登录交接边界
 
-如果某块板有稳定的串口映射，
-同时放一个机器可读文件：
+串口知识随 `serial-console` 工具一起维护和发布：
 
 ```text
-board_knowledge/
-  <board-id>/
-    serial.yaml
+tools/serial-console/
+  profiles/
+    <board-id>/
+      README.md
+      serial.yaml
 ```
 
-`serial.yaml` 只放给 `tools/serial-console` 消费的串口事实：
+其中：
 
-- profile 完整程度：`verified` / `partial` / `unknown`
-- 已验证适配器接口数量
-- USB interface 顺序，例如 `if00` / `if01`
-- 默认 baudrate
-- role 到 interface / `/dev/serial/by-id/*` / `ttyUSB*` 的映射
-- 哪些 role 默认抓取、哪些是必要端口
-- 映射的 case 和 session 证据
-- 串口侧已验证风险
+- `serial.yaml` 保存给工具消费的机器可读 role 映射
+- profile `README.md` 保存该板的串口顺序、BCU/驱动冲突和捕获约束
+- 本目录继续保存 reset owner、boot mode、下载态、loader 和其它非串口事实
 
-串口工具的命令语义不写在这里；
-工具用法继续看 `../tools/serial-console/USAGE.md`，
-字段定义看 `../tools/serial-console/PROFILE_SCHEMA.md`。
+本目录的板型 README 只保留 profile 链接，不复制串口映射。
+工具用法看 `../tools/serial-console/USAGE.md`，字段定义看
+`../tools/serial-console/PROFILE_SCHEMA.md`。
 
 未完整确认的板必须标记为 `partial`。
 已知 role 可以直接复用，但不能因为当前插上了两个或四个串口，就给剩余接口

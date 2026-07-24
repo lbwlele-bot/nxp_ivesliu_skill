@@ -19,15 +19,15 @@ import serial
 import yaml
 
 
-SUPPORT_ROOT = Path(__file__).resolve().parents[2]
-BOARD_ROOT = SUPPORT_ROOT / "board_knowledge"
+TOOL_ROOT = Path(__file__).resolve().parent
+PROFILE_ROOT = TOOL_ROOT / "profiles"
 DEV_ROOT = Path("/dev")
 SYS_TTY_ROOT = Path("/sys/class/tty")
 PROFILE_STATES = {"verified", "partial", "unknown"}
 
 
 def load_profile(board: str) -> dict[str, Any]:
-    path = BOARD_ROOT / board / "serial.yaml"
+    path = PROFILE_ROOT / board / "serial.yaml"
     if not path.is_file():
         raise SystemExit(f"serial profile not found: {path}")
     with path.open("r", encoding="utf-8") as handle:
@@ -1318,8 +1318,8 @@ def cmd_shell(args: argparse.Namespace) -> int:
 
 
 def add_common(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--board", required=True, help="board_knowledge board id")
-    parser.add_argument("--role", help="serial role from board serial.yaml")
+    parser.add_argument("--board", required=True, help="packaged board profile id")
+    parser.add_argument("--role", help="serial role from the packaged board profile")
     parser.add_argument("--device", help="explicit serial device path")
     parser.add_argument("--adapter", help="adapter sysfs key, USB serial, or VID:PID")
     parser.add_argument("--baud", type=int, help="override baudrate")
@@ -1333,12 +1333,12 @@ def build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", required=True)
 
     p_list = sub.add_parser("list", help="list serial devices and board role mappings")
-    p_list.add_argument("--board", help="optional board_knowledge board id")
+    p_list.add_argument("--board", help="optional packaged board profile id")
     p_list.add_argument("--baud", type=int, help="override baudrate")
     p_list.set_defaults(func=cmd_list)
 
     p_probe = sub.add_parser("probe", help="detect adapters and validate a board serial profile")
-    p_probe.add_argument("--board", help="optional board_knowledge board id")
+    p_probe.add_argument("--board", help="optional packaged board profile id")
     p_probe.add_argument("--adapter", help="adapter sysfs key, USB serial, or VID:PID")
     p_probe.set_defaults(func=cmd_probe)
 

@@ -11,8 +11,8 @@
 - 这块板先要明确区分：
   通用 Linux
   还是 `RTE 3.3`
-- 机器可读串口映射：
-  `serial.yaml`
+- 部分验证的串口映射和 UART-mux 风险：
+  `../../tools/serial-console/profiles/imx95evk19/README.md`
 - 当打包目标会影响后续判断时，
   `flash_a55` 和 `flash_all` 必须保持显式
 - 当前树里：
@@ -52,9 +52,8 @@
 
 ## 已验证的 `bcu -keep` / UART-mux 规则
 
-- 在 `imx95evk19` 上，
-  `bcu reset ... -keep` 可能把 `ft_fta_sel` 留在 `HIGH`
-- 这会让第一路 FTDI 运行态串口看起来像“假静音”
+- `bcu reset ... -keep` 可能把 `ft_fta_sel` 留在 `HIGH`；串口侧现象和
+  当前 role 映射由 i.MX95 serial profile 维护
 - 如果当前工作流需要第一路运行态日志，
   在 `-keep` 之后要优先恢复：
   `set_gpio ft_fta_sel 0 -board=imx95evk19`

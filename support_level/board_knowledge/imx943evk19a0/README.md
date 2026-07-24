@@ -8,11 +8,10 @@
 
 ## 默认识别
 
-- 默认 Linux / `U-Boot` console：
-  `/dev/ttyUSB2`
-- `/dev/ttyUSB3` 更偏向 `SM` / monitor console，不默认当 Linux shell
-- 机器可读串口映射：
-  `serial.yaml`
+- 已验证串口映射和默认 console：
+  `../../tools/serial-console/profiles/imx943evk19a0/README.md`
+- 机器可读 profile：
+  `../../tools/serial-console/profiles/imx943evk19a0/serial.yaml`
 - 默认 `bcu` board token：
   `imx943evk19a0`
 
@@ -45,12 +44,8 @@
 - 在 SW7/BCU GPIO 路径修复前，启动捕获使用物理重新上电
 - 不通过写 EEPROM 伪装成 B1
 
-BCU 硬件访问同样会接管 FT4232H `if01` 并留下未绑定状态。恢复：
-
-```bash
-sudo -n ../../tools/serial-console/serial-console recover --board imx943evk19a0
-../../tools/serial-console/serial-console probe --board imx943evk19a0
-```
+BCU 对 FT4232H channel 1 的影响和恢复命令由 i.MX943 serial profile
+维护，不在板级 reset 规则里重复。
 
 ## 已验证的基础进入方式
 
@@ -81,20 +76,9 @@ sudo -n ../../tools/serial-console/serial-console recover --board imx943evk19a0
 
 ## 当前串口映射
 
-主板 FT4232H 固定枚举四个 interface：
-
-- `if00`：无默认运行日志 role
-- `if01`：BCU 板控通道，无默认运行日志 role
-- `if02`：A-core，SPL/BL31/U-Boot/Linux
-- `if03`：SMFW / SM Debug Monitor
-
-2026-07-24 物理重新上电捕获结果：
-
-- A-core：73658 bytes，无重连，Linux 6.12.34-rt11 到 login
-- SM：103 bytes，无重连，看到 `Hello from SM` 和 `SM Debug Monitor`
-
-当前没有连接外部 application M-core UART 转接板；这些 UART 不属于上述
-主板四口 profile，也不作为本轮验收失败项。
+主板四路 interface、默认 `a-core` / `sm` 捕获、现场字节数和外部 M-core
+UART 边界统一见：
+`../../tools/serial-console/profiles/imx943evk19a0/README.md`。
 
 ## 已验证的异构核约束
 
@@ -155,7 +139,7 @@ sudo -n ../../tools/serial-console/serial-console recover --board imx943evk19a0
   优先看当前 USB 下载态证据，例如 `SDPS` / `SDPV`
   不要等串口先说话才承认板子还在下载态
 - `U-Boot`
-  默认先在 `/dev/ttyUSB2` 抓验证
+  默认先在 serial profile 的 `a-core` role 抓验证
   看到 `Hit any key to stop autoboot`、`u-boot=>` 或等价 prompt，才算已经进入 `U-Boot`
 - `Linux-ready`
   必须先看到明确的 Linux 启动证据，再把问题交给登录判断
@@ -178,8 +162,8 @@ sudo -n ../../tools/serial-console/serial-console recover --board imx943evk19a0
 
 ## 已验证的 Linux 登录 / shell 验证边界
 
-- `imx943` 的默认 Linux shell 验证 仍优先走 `/dev/ttyUSB2`
-- `/dev/ttyUSB3` 不默认拿来跑 Linux login automation
+- `imx943` 的默认 Linux shell 验证使用 serial profile 的 `a-core` role
+- `sm` role 不用于 Linux login automation
 - 当前实验室默认 Linux 凭据是：
   username `root`
   password `root`
