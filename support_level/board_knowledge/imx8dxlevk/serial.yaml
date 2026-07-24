@@ -61,5 +61,7 @@ evidence:
 host_hazards:
   - ModemManager can disturb FT4232H ports.
   - ttyUSB0 and ttyUSB1 can silently fall back to 9600 after re-enumeration.
+  - Never run BCU and serial-console concurrently; repeated tests lost if01/M4 in 5 of 5 concurrent probes.
+  - After BCU exits, wait for udev and require a fresh probe with all four interfaces before capture.
   - Never use BCU reset on i.MX8DXL; it can re-enumerate FT4232H and permanently lose early M4 or SCFW bytes.
   - Prepare all captures before boot-mode selection, then use the physical RESET button.

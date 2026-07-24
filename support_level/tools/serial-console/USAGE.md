@@ -141,7 +141,22 @@ logs/sd-boot-serial-session.yaml
   --ready-file state/serial.ready
 ```
 
-READY 文件只在所有选定端口已经成功打开、reader 已经启动后写入。
+READY 文件是活动状态标记，不是历史结果：
+
+- 新会话启动时先删除同路径的旧 READY，避免把上一次会话误判为本次就绪
+- 所有选定端口成功打开、reader 启动后，写入 `state: active`、进程 PID、
+  会话名、开始时间和 roles
+- 捕获正常结束或被中断退出时删除 READY
+- 最终结果以 `*-serial-session.yaml` 为准
+
+进程被 `SIGKILL` 或主机掉电时，操作系统无法保证执行清理；下一次
+`capture-set` 启动仍会先清除该路径。自动化程序应先启动本次
+`capture-set`，再等待 READY 出现，不应只检查一个已有文件。
+
+人工 reset 等外部动作可能经过对话或操作等待，捕获窗口应覆盖这段等待，
+例如使用 `--timeout 600`。启动日志已经抓全后，可向进程发送 Ctrl-C 或
+`SIGTERM`；工具会通知各 reader 停止、删除 READY，并照常生成 session
+summary。不要使用 `SIGKILL` 结束正常捕获。
 
 ### 未知板型
 

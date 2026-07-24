@@ -4,7 +4,7 @@ type: board_profile
 human_doc: README.md
 owner: board-exec
 
-summary: i.MX8DXL EVK 板级事实入口，包含串口映射、手动复位规则、下载态识别和 SDPS/FB 阶段边界。
+summary: i.MX8DXL EVK 板级事实入口，包含串口映射、手动复位规则、M 核 loader 偏好、变体适用边界和 SDPS/FB 阶段证据。
 
 relations:
   projects: []
@@ -26,8 +26,13 @@ case_required_for:
 warnings:
   - The manual-reset-only rule is scoped to imx8dxlevk and must not be inherited by i.MX93, i.MX943, or another board profile.
   - On i.MX8DXL, BCU is allowed only for boot-mode selection; never use bcu reset usb, bcu reset sd, or other bcu reset variants.
+  - Never run BCU and serial-console concurrently; after BCU exits, wait for udev and require all four FT4232H interfaces in a fresh probe.
   - Prepare M4, A-core, and SCFW captures first, select the boot mode, then ask the user to press the physical RESET button.
   - BCU reset can re-enumerate FT4232H and permanently lose early M4 or SCFW bytes, so a successful BCU return is not an acceptable substitute.
+  - Select the reference image from the current silicon revision, DDR, release, recipe, and loader; historical A1 assets are not a B0 baseline.
+  - The A1 regression plus second-stage flash_m4 flow is historical case evidence, not the default i.MX8DXL recipe.
+  - Prefer early boot flash.bin M-core loading on this DXL platform unless the case explicitly requires and validates bootaux or Linux remoteproc loading.
+  - Linux remoteproc attach-only does not mean Linux loaded the M core.
   - SDPS to FB first-stage proof and existing FB second-stage writes are different observations.
   - Serial silence alone does not prove board silence; check host serial setup and USB state.
   - State-changing bcu and uuu actions require fresh probe before and after the action.

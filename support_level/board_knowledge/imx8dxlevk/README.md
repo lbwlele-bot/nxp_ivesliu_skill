@@ -48,6 +48,11 @@ Linux 的裸 `ttyUSB*` 编号通常会和这个顺序一致，
 - 当前允许的 BCU 命令只用于切 boot mode：
   - `sudo -n bcu init usb -board=imx8dxlevk`
   - `sudo -n bcu init sd -board=imx8dxlevk`
+- BCU 和 `serial-console` 必须串行执行，不能并发 probe、prepare 或 capture。
+  2026-07-24 实测并发探测连续 5/5 次只枚举到三个 FT4232H interface，
+  固定丢失 `if01/M4`；BCU 结束后串口独占探测连续 5/5 次恢复四个 interface。
+- BCU 命令结束后先执行 `udevadm settle` 并短暂等待，再做串口 fresh probe；
+  只有 `if00-if03` 四个 interface 完整出现后才能开始捕获或要求用户 reset。
 - i.MX8DXL 当前流程禁止使用 `bcu reset usb`、`bcu reset sd`
   或其它 `bcu reset` 变体。
 - reset owner 固定为用户：
@@ -76,6 +81,9 @@ Linux 的裸 `ttyUSB*` 编号通常会和这个顺序一致，
   而不是裸 `ttyUSB*`
 - 先停 `ModemManager`
 - 先把 FT4232H 四个口都重新强制回 `115200 8N1 raw`
+- 不与 BCU 并发；BCU 完成、udev settle 后重新确认四个 interface
+- 等待用户手动 reset 的交互式捕获使用足够长的等待窗口；启动日志抓全后
+  用 Ctrl-C 或 SIGTERM 让工具正常生成 session summary，不用 SIGKILL
 - 第一条从全新 `SDPS` 开始的 `uuu -b sd` 之前，就应先把日志采集准备好
 
 高风险误区：
@@ -83,68 +91,100 @@ Linux 的裸 `ttyUSB*` 编号通常会和这个顺序一致，
 - `ttyUSB*` 安静，不等于板子安静
 - 如果 Windows 能看到 log、本机看不到，先查本机串口层
 
-## 已验证的基础进入方式
+## M 核加载路径偏好
 
-### 第一阶段基线
+对 i.MX8QM、i.MX8QXP、i.MX8DXL 这一代 SCFW 平台，
+当前工程先验是优先使用 early boot `flash.bin` 路径加载 M 核。
 
-从全新 `SDPS` 开始，已验证基线目标是：
+这是默认路线选择，不是能力判定：
 
-- 先用已知可用的 `flash.bin`
-- 把板子从 `SDPS` 带到当前 `FB`
+- `bootaux` 和 Linux remoteproc loading 并非禁止使用
+- 这些较早平台及部分 release 上，
+  `flash.bin` 路径通常有更充分的组合验证
+- 没有明确需求和当前板型/release 证据时，
+  不主动把 loader 从 `flash.bin` 切到 `bootaux` 或 remoteproc loading
+- 如果 case 明确需要其它 loader，先说明理由、支持证据和回退路径，
+  再与工程师确认
 
-对 `i.MX8DXL + lf-6.18.2-1.0.0`，
-优先复用的基线根是：
+Linux remoteproc attach-only 与 remoteproc loading 不是一回事。
+M 核可以由 `flash.bin` 启动，
+Linux 仍通过 attach 使用 resource table、virtio 和 RPMsg。
 
-- `validated-lf-6.18.2-1.0.0`
+## 基线与历史案例的适用边界
 
-其中第一阶段基线是：
+i.MX8DXL 不存在脱离实物身份的单一全局基线。
+每个新 case 必须先确认：
+
+- silicon revision
+- DDR 类型
+- BSP/release
+- boot image recipe
+- M 核 loader
+- 当前验证目标
+
+当前实物和用户确认优先于历史案例。
+历史 A1 板上验证过的镜像不能自动成为 B0 板的基线。
+
+### 当前 B0 LPDDR4 case
+
+2026-07-22 当前实物已确认为：
+
+- silicon：B0
+- DDR：LPDDR4
+- BSP：`lf-6.18.2-1.0.0`
+- recipe：`flash_linux_m4`
+- M 核 loader：early boot `flash.bin`
+- regression：不使用
+
+同一身份下可用于对照和救援的官方 B0 镜像：
+
+- `../../Image/i.MX8DXL-6.18.2-1.0.0/imx-boot-imx8dxlb0-lpddr4-evk-sd.bin-flash_linux_m4`
+- SHA-256：
+  `b256698c8505808fe219a124ebdb8d9d7482bbf01b5ea5509d07251d0d0afd2e`
+
+该镜像是当前 B0 case 的参考输入，
+不能因此推广成其它 revision、release 或 recipe 的默认基线。
+
+### 历史 A1 case
+
+下面的 A1 regression 镜像来自之前的 A1 实物和历史 FlexCAN/`flash_m4`
+两阶段案例：
 
 - `imx-boot-imx8dxla1-lpddr4-evk-sd_flash_regression_linux_m4.bin`
 
-### 第二阶段中继
+该历史案例曾使用：
 
-`flash_m4` 不是第一阶段镜像。
+```text
+first-stage A1 regression flash.bin: SDPS -> FB
+-> second-stage flash_m4 in the same FB session
+-> switch to SD boot and reset
+```
 
-它只应在：
+这条记录只保留为历史案例证据：
 
-- 第一阶段基线已经把板子带到当前 `FB`
+- 不适用于当前 B0 实物
+- 不把 `regression` 或 `flash_m4` 两阶段流程当成 DXL 通用默认
+- 未来重新使用 A1 板时仍要重新确认当前实物、release 和 recipe
 
-之后，作为第二阶段 payload 写入。
+## UUU 阶段证据
 
-不要把 `flash_m4` 直接当成从 `SDPS` 开始的独立基线。
+从全新 `SDPS` 执行 first-stage `uuu -b sd`
+和在已有 `FB` 会话中执行后续写入不是同一个观察点。
 
-## 已验证的复位规则
+- 验证新的 first-stage 链路时，默认先回到 fresh `SDPS`
+- 只有当前 case 明确定义了 second-stage，
+  且已有证据证明当前处于同一 `FB` 会话时，才复用该会话
+- 如果板子已经在 `FB`，重跑同样命令不能重新证明 `SDPS -> FB`
+- UUU 写入成功不能直接证明最终 SD boot 运行态成立
 
-- 除了那个特例：
-  第一阶段基线已经把板子带到当前 `FB`
-  并且你就是要在同一 `FB` 会话里追加第二阶段 `flash_m4`
-- 其它 `uuu` 操作默认都应该先回到全新 `SDPS`
+## 手动启动交接
 
-也就是说：
+完成当前 case 要求的 boot image 和 FAT 文件写入后：
 
-- “第一次从 `SDPS` 开始的 `uuu -b sd`”
-- 和“板子已经在 `FB` 时重跑 `uuu -b sd`”
-
-不是同一个观察点。
-
-## 已验证的高频注意事项
-
-- 同样是 `uuu -b sd`：
-  - 从全新 `SDPS` 开始
-  - 和复用现有 `FB` 会话
-  不是同一种证明
-- 如果板子已经在 `FB`，重跑同样命令可能只是复用现有 Fastboot 会话
-- 这时不要把结果误读成“又重新证明了一次 `SDPS -> FB`”
-
-## 已验证的手动交接规则
-
-第二阶段 `flash_m4` 写完以后：
-
-- 需要手动切回 `SD boot`
-- 需要手动 reset
-- 然后再看 `M4` / `U-Boot` / `SCFW` 运行态日志
-
-不要把当前 `FB` 会话里的写入成功，直接当成最终运行态已经验证
+- 先准备 M4、A-core、SCFW 三路捕获
+- BCU 只切到 SD boot mode
+- 用户手动按板上 RESET
+- 再用 USB 枚举和三路运行日志验证实际启动结果
 
 ## 已验证的主机侧坑点
 
@@ -189,15 +229,21 @@ SCFW 编译与第 4 个 COM：
 
 对 `i.MX8DXL + lf-6.18.2-1.0.0`：
 
+- 先锁定当前实物、DDR、recipe 和 loader，
+  再选择同一身份的参考镜像和输入
 - 先按当前实物芯片 revision 选择 AHAB，不能把旧 A1 EVK 的 AHAB
   默认套到 B0 板上
 - 当前 B0 LPDDR4 EVK 已定位到 B0 AHAB：
-  `firmware/imx8dxl/imx-seco-3.7.4/firmware/seco/mx8dxlb0-ahab-container.img`
+  `../../firmware/imx8dxl/imx-seco-3.7.4/firmware/seco/mx8dxlb0-ahab-container.img`
+- B0 AHAB SHA-256：
+  `bbd13c802df44e3fa6c476a84a15ce680eaf3f5e8d1a6b367b670e67ce34c0f7`
+- A1 regression 镜像只保留为历史案例证据，
+  不参与当前 B0 case 的默认选择
 - `SCFW` 文件名当前不带 A1/B0；使用前记录来源、hash，并用上板日志验证组合
 
 ## 注意事项
 
-- 如果本地重新构建的第一阶段回归镜像卡在 `SDPS`，
-  先和已知可用基线做 A/B
-- 如果基线和新图都在同一 `SDPS` 步骤超时，
+- 如果本地重新构建的 first-stage 镜像卡在 `SDPS`，
+  先和当前实物身份匹配的已知可用参考镜像做 A/B
+- 如果参考镜像和新图都在同一 `SDPS` 步骤超时，
   先怀疑下载链路或会话状态，不要先怪新镜像

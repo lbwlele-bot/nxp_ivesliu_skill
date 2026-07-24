@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import re
 import select
+import signal
 import subprocess
 import sys
 import threading
@@ -474,7 +475,8 @@ def probe_profile(
     actual_count = len(group["interfaces"])
     if expected_count is not None and actual_count != int(expected_count):
         result["errors"].append(
-            f"adapter interface count mismatch: expected {expected_count}, detected {actual_count}"
+            f"adapter interface count mismatch: expected {expected_count}, detected {actual_count}; "
+            "do not run board-control and serial tools concurrently, wait for udev, then re-probe"
         )
 
     detected = interface_map(group)
@@ -566,6 +568,7 @@ def capture_role_loop(
     expect_data: bool,
     initial_serial: serial.Serial | None = None,
     start_event: threading.Event | None = None,
+    stop_event: threading.Event | None = None,
 ) -> dict[str, Any]:
     started = time.strftime("%Y-%m-%dT%H:%M:%S%z")
     result: dict[str, Any] = {
@@ -597,7 +600,9 @@ def capture_role_loop(
         start_event.wait()
     deadline = time.monotonic() + timeout
 
-    while time.monotonic() < deadline:
+    while time.monotonic() < deadline and not (
+        stop_event is not None and stop_event.is_set()
+    ):
         if ser is None:
             selected = resolve_device(profile, role, device, group=group)
             result["last_device"] = selected
@@ -868,6 +873,17 @@ def cmd_capture(args: argparse.Namespace) -> int:
 
 
 def cmd_capture_set(args: argparse.Namespace) -> int:
+    ready_path = Path(args.ready_file) if args.ready_file else None
+    if ready_path:
+        try:
+            ready_path.unlink(missing_ok=True)
+        except OSError as exc:
+            print(
+                f"capture-set error: cannot clear stale ready file {ready_path}: {exc}",
+                file=sys.stderr,
+            )
+            return 1
+
     groups = discover_adapter_groups()
     profile = load_profile(args.board) if args.board else None
     group, selection_error = select_adapter_group(groups, profile, args.adapter)
@@ -958,6 +974,15 @@ def cmd_capture_set(args: argparse.Namespace) -> int:
         return 1
 
     start_event = threading.Event()
+    stop_event = threading.Event()
+    stop_reason = {"value": ""}
+
+    def request_stop(signum: int, _frame: Any) -> None:
+        stop_reason["value"] = signal.Signals(signum).name
+        stop_event.set()
+
+    previous_sigterm_handler = signal.getsignal(signal.SIGTERM)
+    signal.signal(signal.SIGTERM, request_stop)
 
     def run_role(role: str) -> None:
         log_path = str(log_dir / f"{name}-{role}.log")
@@ -977,6 +1002,7 @@ def cmd_capture_set(args: argparse.Namespace) -> int:
             expect_data=role in expect_data,
             initial_serial=opened[role],
             start_event=start_event,
+            stop_event=stop_event,
         )
 
     for role in roles:
@@ -984,23 +1010,44 @@ def cmd_capture_set(args: argparse.Namespace) -> int:
         thread.start()
         threads.append(thread)
 
-    start_event.set()
-    if args.ready_file:
-        ready_path = Path(args.ready_file)
-        ready_path.parent.mkdir(parents=True, exist_ok=True)
-        ready_path.write_text(
-            f"board: {args.board or 'unclassified'}\n"
-            f"name: {name}\n"
-            f"roles: {','.join(roles)}\n",
-            encoding="utf-8",
+    try:
+        start_event.set()
+        if ready_path:
+            ready_path.parent.mkdir(parents=True, exist_ok=True)
+            ready_path.write_text(
+                "schema_version: 1\n"
+                "state: active\n"
+                f"pid: {os.getpid()}\n"
+                f"board: {args.board or 'unclassified'}\n"
+                f"name: {name}\n"
+                f"started: {session_started}\n"
+                f"roles: {','.join(roles)}\n",
+                encoding="utf-8",
+            )
+        print(
+            f"ALL PORTS READY: {', '.join(roles)}; capture is active",
+            flush=True,
         )
-    print(
-        f"ALL PORTS READY: {', '.join(roles)}; capture is active",
-        flush=True,
-    )
 
-    for thread in threads:
-        thread.join()
+        try:
+            for thread in threads:
+                thread.join()
+        except KeyboardInterrupt:
+            stop_reason["value"] = "KeyboardInterrupt"
+            stop_event.set()
+            print("\ncapture-set: stop requested; finalizing session", flush=True)
+            for thread in threads:
+                thread.join()
+    finally:
+        signal.signal(signal.SIGTERM, previous_sigterm_handler)
+        if ready_path:
+            try:
+                ready_path.unlink(missing_ok=True)
+            except OSError as exc:
+                print(
+                    f"capture-set warning: cannot remove ready file {ready_path}: {exc}",
+                    file=sys.stderr,
+                )
 
     summary_path = log_dir / f"{name}-serial-session.txt"
     yaml_summary_path = log_dir / f"{name}-serial-session.yaml"
@@ -1021,6 +1068,7 @@ def cmd_capture_set(args: argparse.Namespace) -> int:
         "timeout": args.timeout,
         "baud": baud,
         "reconnect": not args.no_reconnect,
+        "stop_reason": stop_reason["value"],
         "roles": {role: results.get(role, {}) for role in roles},
     }
     with yaml_summary_path.open("w", encoding="utf-8") as handle:
@@ -1035,6 +1083,7 @@ def cmd_capture_set(args: argparse.Namespace) -> int:
         handle.write(f"timeout: {args.timeout}\n")
         handle.write(f"baud: {baud}\n")
         handle.write(f"reconnect: {not args.no_reconnect}\n")
+        handle.write(f"stop_reason: {stop_reason['value']}\n")
         for role in roles:
             result = results.get(role, {})
             handle.write("\n")
@@ -1241,7 +1290,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_capture_set.add_argument("--stop-modemmanager", action="store_true")
     p_capture_set.add_argument("--expect-data", action="append", help="role that must receive at least one byte")
     p_capture_set.add_argument("--require-data", action="store_true", help="require data on every selected role")
-    p_capture_set.add_argument("--ready-file", help="write this file after every selected port is open")
+    p_capture_set.add_argument(
+        "--ready-file",
+        help="active marker: create after every selected port is open and remove when capture ends",
+    )
     p_capture_set.set_defaults(func=cmd_capture_set)
 
     p_send = sub.add_parser("send", help="send commands to a serial port")

@@ -199,21 +199,65 @@ class SerialConsoleTests(unittest.TestCase):
         self.assertEqual(result["state"], "empty")
         self.assertEqual(result["status"], 2)
 
+    def test_capture_loop_stops_cleanly_on_stop_event(self) -> None:
+        stop = threading.Event()
+        stop.set()
+        started = time.monotonic()
+
+        result = serial_console.capture_role_loop(
+            profile={"ports": {}},
+            role="test",
+            device="/dev/fake",
+            group=None,
+            baud=115200,
+            log_path=None,
+            timeout=60,
+            read_timeout=0.001,
+            chunk_size=512,
+            reconnect=False,
+            reconnect_interval=0.001,
+            tee=False,
+            expect_data=False,
+            initial_serial=FakeSerial([]),
+            stop_event=stop,
+        )
+
+        self.assertLess(time.monotonic() - started, 0.1)
+        self.assertEqual(result["state"], "empty")
+        self.assertEqual(result["status"], 0)
+
     def test_capture_set_writes_ready_and_structured_session(self) -> None:
         groups = serial_console.group_serial_interfaces(four_port_records())
         original_discover = serial_console.discover_adapter_groups
         original_open = serial_console.open_serial
         serial_console.discover_adapter_groups = lambda: groups
-        serial_console.open_serial = (
-            lambda device, _baud, _timeout: FakeSerial(
-                [f"log from {device}\n".encode()],
-                port=device,
-            )
-        )
 
         try:
             with tempfile.TemporaryDirectory() as temp_dir:
                 root = Path(temp_dir)
+                ready_path = root / "ready.txt"
+                ready_path.write_text("stale marker\n")
+                ready_observed = threading.Event()
+
+                class ReadyAwareFakeSerial(FakeSerial):
+                    def read(self, size: int) -> bytes:
+                        deadline = time.monotonic() + 0.1
+                        while time.monotonic() < deadline:
+                            if (
+                                ready_path.is_file()
+                                and "state: active" in ready_path.read_text()
+                            ):
+                                ready_observed.set()
+                                break
+                            time.sleep(0.001)
+                        return super().read(size)
+
+                serial_console.open_serial = (
+                    lambda device, _baud, _timeout: ReadyAwareFakeSerial(
+                        [f"log from {device}\n".encode()],
+                        port=device,
+                    )
+                )
                 args = SimpleNamespace(
                     board=None,
                     adapter=None,
@@ -230,7 +274,7 @@ class SerialConsoleTests(unittest.TestCase):
                     stop_modemmanager=False,
                     expect_data=None,
                     require_data=True,
-                    ready_file=str(root / "ready.txt"),
+                    ready_file=str(ready_path),
                 )
                 output = io.StringIO()
                 with redirect_stdout(output):
@@ -238,7 +282,8 @@ class SerialConsoleTests(unittest.TestCase):
 
                 self.assertEqual(status, 0)
                 self.assertIn("ALL PORTS READY", output.getvalue())
-                self.assertTrue((root / "ready.txt").is_file())
+                self.assertTrue(ready_observed.is_set())
+                self.assertFalse(ready_path.exists())
                 self.assertTrue(
                     (root / "logs/unknown-board-serial-session.txt").is_file()
                 )
