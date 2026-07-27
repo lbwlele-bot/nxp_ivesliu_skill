@@ -26,6 +26,15 @@
 这些是候选依赖，不是每次都全量重建。
 当前 case 真正需要哪些输入，由 SoC、软件栈、recipe、payload 集合和验证目标共同决定。
 
+机器可执行的候选组件和依赖方向由同目录 `DEPENDENCIES.yaml` 维护。
+进入真实 flashbin 编译前，必须在当前 case 准备
+`records/compile-manifest.yaml`，并通过 `compile-tool assess` 得到
+`REUSE / REBUILD / REPACK` 结果。
+未使用的候选组件也必须显式写成 `not_applicable + reason`。
+
+`DEPENDENCIES.yaml` 只表达“哪些候选输入会进入最终 flashbin”；
+不推断 SoC recipe，也不替代当前软件栈和项目 `USAGE.md`。
+
 正常进入方式：
 
 - 先由 `compile` 钉死：

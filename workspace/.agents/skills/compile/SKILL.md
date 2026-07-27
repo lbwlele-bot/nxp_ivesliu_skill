@@ -78,35 +78,61 @@ description: 编译阶段高层路由层（在本机 Ubuntu 上做）。当任�
 ## 统一编译执行入口
 
 源码阅读、依赖分析、编译对象判断和命令规划不需要调用工具。
-只有准备执行第一条真实编译命令时，
-才必须进入：
+只有准备进入真实编译或 flashbin 软件状态评估时，才进入：
 
 - `../support_level/tools/compile-tool/USAGE.md`
 - `../support_level/tools/compile-tool/compile-tool`
 
-规范流程固定为：
+### flashbin
 
-1. 在当前 case 中生成编译请求，推荐位置是
-   `records/compile-request.yaml`
-2. 请求按 `compile-tool/REQUEST_SCHEMA.md` 显式写出：
+flashbin 首先在当前 case 准备：
+
+- `records/compile-manifest.yaml`
+- `records/compile-request.yaml`
+
+manifest 必须按 `compile-tool/SOFTWARE_STATE_SCHEMA.md`
+覆盖 dependency profile 中的全部候选组件；
+未使用组件填写 `not_applicable + reason`。
+
+流程固定为：
+
+1. 执行 `compile-tool assess <manifest>`
+2. 如果是 `ACQUIRE_REQUIRED`，完整展示源码准备命令，
+   再以同一 hash 执行 `compile-tool acquire`
+3. 重新 `assess`；`REUSE_ONLY` 直接复用，不制造编译命令
+4. `READY` 时按工具给出的精确 component/action 顺序生成 schema v2 请求
+5. 请求按 `compile-tool/REQUEST_SCHEMA.md` 显式写出：
    SoC、silicon revision、芯片封装、板型、DDR、软件版本，
    以及它们对本次编译的影响
-3. 执行 `compile-tool prepare <request>`
-4. 在 commentary 中向用户完整展示 `prepare` 输出的身份、
-   工作目录、环境变量、原始编译命令和 plan hash
-5. 无需逐次等待用户确认，使用同一个 hash 执行
+6. 执行 `compile-tool prepare <request>`
+7. 在 commentary 中向用户完整展示 `prepare` 输出的身份、
+   assessment、最小动作集合、工作目录、环境变量、原始命令和 plan hash
+8. 无需逐次等待用户确认，使用同一个 hash 执行
    `compile-tool run <request> --plan-hash <hash>`
 
-只要身份、工作目录、环境变量或原始命令发生变化，
-旧 hash 就失效；
+`state/software-state.yaml` 只能由工具生成。
+不要手工填写 hash、把失败产物标成成功，或绕过 assessment 增加全量编译步骤。
+
+只要源码、配置、工具链、产物、依赖图、身份、工作目录、环境变量
+或原始命令发生变化，旧 hash 就失效；
 必须重新 `prepare`、重新向用户展示，再执行。
+
+### 其他 compile target
+
+Linux、M FreeRTOS、Zephyr 和 A55 RTOS 首版仍使用 schema v1：
+
+1. 生成 `records/compile-request.yaml`
+2. `prepare` 并完整展示身份和原始命令
+3. 使用同一 plan hash 执行 `run`
+
+工具会明确提示这些 target 尚未启用最小重编约束。
 
 在本工作区的规范流程中，
 不直接执行裸 `make`、`cmake`、`ninja`、`bitbake`
 或其它真实编译命令。
 这些原始命令仍由当前 compile target、项目 `USAGE.md`
 和工程判断决定，`compile-tool` 只负责显式展示、绑定和执行，
-不生成 recipe，也不解释命令技术语义。
+不生成 recipe，也不解析 Makefile。
 
 ### 先只保留到“编译对象 + 最小依赖集合”这一层
 

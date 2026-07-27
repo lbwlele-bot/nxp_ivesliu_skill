@@ -1,0 +1,43 @@
+schema_version: 1
+target: flashbin
+
+components:
+  atf:
+    kind: build
+    depends_on: []
+  smfw:
+    kind: build
+    depends_on: []
+  uboot:
+    kind: build
+    depends_on: []
+  optee:
+    kind: build
+    depends_on: []
+  oei:
+    kind: build
+    depends_on: []
+  m_payload:
+    kind: build
+    depends_on: []
+  firmware:
+    kind: fixed_input
+    depends_on: []
+  scfw:
+    kind: fixed_input
+    depends_on: []
+  ahab:
+    kind: fixed_input
+    depends_on: []
+  flashbin:
+    kind: package
+    depends_on:
+      - atf
+      - smfw
+      - uboot
+      - optee
+      - oei
+      - m_payload
+      - firmware
+      - scfw
+      - ahab

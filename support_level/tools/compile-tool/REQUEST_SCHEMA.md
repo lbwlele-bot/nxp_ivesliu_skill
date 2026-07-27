@@ -1,78 +1,80 @@
 # Compile Request Schema
 
-`compile-tool` 使用一份显式 YAML 请求描述本次编译身份和原始命令。
-首版 schema 固定为 `1`。
+`compile-tool` 支持两种请求：
+
+- schema v1：非 flashbin target 的身份与原始命令门禁
+- schema v2：flashbin assessment 绑定、最小 component unit 和原始命令门禁
+
+flashbin 不接受 schema v1。
+
+## Schema v2
 
 ```yaml
-schema_version: 1
-case: 2026-xx-xx-imx95-example
+schema_version: 2
+case: 2026-xx-xx-imx8dxl-example
 
 identity:
-  soc: i.MX95
+  soc: i.MX8DXL
   silicon_revision: B0
-  chip_package: 19x19
-  board: imx95evk19
-  ddr: LPDDR5
-  software_release: RTE-3.3
+  chip_package: N/A
+  board: imx8dxlevk
+  ddr: LPDDR4
+  software_release: lf-6.18.2-1.0.0
 
-identity_notes: {}
+identity_notes:
+  chip_package: 当前 recipe 不按封装选择输入
 
 identity_effects:
-  soc: SOC=iMX95
+  soc: SOC=iMX8DXL
   silicon_revision: REV=B0
-  chip_package: 使用 mx95lp5 输入目录
-  board: 使用 i.MX95 19x19 EVK 对应配置
-  ddr: LPDDR_TYPE=lpddr5
-  software_release: 使用 RTE 3.3 对齐的源码和固件输入
+  chip_package: 当前 recipe 无封装参数
+  board: 使用 imx8dxlevk 配置
+  ddr: 使用 LPDDR4 固件输入
+  software_release: 使用对应 LF 软件线
+
+assessment:
+  manifest: /absolute/case/records/compile-manifest.yaml
+  hash: sha256:<assess-output>
 
 compile:
   target: flashbin
-  steps:
-    - name: pack-flash-bin
-      cwd: /absolute/path/to/imx-mkimage
-      env:
-        CROSS_COMPILE: /absolute/path/to/aarch64-none-linux-gnu-
-      command: make SOC=iMX95 REV=B0 OEI=YES LPDDR_TYPE=lpddr5 flash_all
+  units:
+    - component: smfw
+      action: rebuild
+      steps:
+        - name: build-smfw
+          cwd: /absolute/case/build/imx-sm
+          env:
+            CROSS_COMPILE: /absolute/toolchain/bin/arm-none-eabi-
+          command: make <original-arguments>
+    - component: flashbin
+      action: repack
+      steps:
+        - name: pack-flash-bin
+          cwd: /absolute/case/build/imx-mkimage
+          env: {}
+          command: make SOC=iMX8DXL REV=B0 flash_linux_m4
 ```
 
-## 身份字段
+每个 unit：
 
-以下字段始终必须显式出现：
+- `component` 必须来自当前 assessment
+- `action` 只能是 `rebuild` 或 `repack`
+- 同一个 component 只能出现一次
+- unit 顺序和集合必须与 assessment 完全一致
+- unit 可以包含多条 step；全部成功后才记录该 component
 
-- `soc`
-- `silicon_revision`
-- `chip_package`
-- `board`
-- `ddr`
-- `software_release`
+每条 step：
 
-字段禁止为空，也不能使用 `unknown`、`TBD`、`TODO` 或 `?`。
+- `name`：非空人读名称
+- `cwd`：当前 case 内存在的绝对目录
+- `env`：可选标量环境变量
+- `command`：由 `/bin/bash -lc` 原样执行的非空命令
 
-某字段确实与本次编译无关时可以填写 `N/A`，
-但必须在 `identity_notes` 中写明原因：
+## Schema v1
 
-```yaml
-identity:
-  ddr: N/A
+schema v1 保留原有 `compile.target + compile.steps` 结构。
+身份字段、`N/A + identity_notes`、identity effects、绝对 cwd、环境变量和
+plan hash 规则不变。
 
-identity_notes:
-  ddr: 本次只编译与 DDR 无关的主机侧辅助程序
-```
-
-`identity_effects` 必须覆盖全部身份字段。
-它是给工程师审阅的显式影响说明，不是由工具解释或生成的 recipe。
-
-## 编译步骤
-
-`compile.steps` 至少包含一步。每一步包含：
-
-- `name`：人读步骤名；省略时使用 `step-N`
-- `cwd`：存在的绝对目录
-- `env`：可选环境变量
-- `command`：原始 shell 命令字符串
-
-命令由 `/bin/bash -lc` 原样执行。
-复杂流程应拆成多步，让每条原始命令都能单独显示和检查。
-
-首版不解析命令语义，也不自动补参数。
-命令、工作目录、环境变量或身份的任何变化都会改变 plan hash。
+schema v1 的输出会明确提示当前 target 尚未启用最小重编约束。

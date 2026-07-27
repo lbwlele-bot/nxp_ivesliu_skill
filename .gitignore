@@ -131,6 +131,7 @@ support_level/compile_targets/zephyr/*
 !support_level/compile_targets/a55_rtos/RELATION.yaml
 !support_level/compile_targets/flashbin/README.md
 !support_level/compile_targets/flashbin/RELATION.yaml
+!support_level/compile_targets/flashbin/DEPENDENCIES.yaml
 !support_level/compile_targets/linux/README.md
 !support_level/compile_targets/linux/RELATION.yaml
 !support_level/compile_targets/m_freertos_sdk/README.md
@@ -232,10 +233,15 @@ support_level/tools/uuu/*
 !support_level/tools/compile-tool/compile-tool
 !support_level/tools/compile-tool/USAGE.md
 !support_level/tools/compile-tool/REQUEST_SCHEMA.md
+!support_level/tools/compile-tool/SOFTWARE_STATE_SCHEMA.md
 !support_level/tools/compile-tool/RELATION.yaml
+!support_level/tools/compile-tool/compile_tool/
+support_level/tools/compile-tool/compile_tool/*
+!support_level/tools/compile-tool/compile_tool/*.py
 !support_level/tools/compile-tool/tests/
 support_level/tools/compile-tool/tests/*
 !support_level/tools/compile-tool/tests/test_compile_tool.py
+!support_level/tools/compile-tool/tests/test_state_workflow.py
 !support_level/tools/imx-rm/README.md
 !support_level/tools/imx-rm/USAGE.md
 !support_level/tools/imx-rm/RELATION.yaml

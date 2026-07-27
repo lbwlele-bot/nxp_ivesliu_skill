@@ -41,7 +41,7 @@ def request_data(cwd: Path) -> dict:
             "software_release": "RTE 3.3 aligned inputs",
         },
         "compile": {
-            "target": "flashbin",
+            "target": "linux",
             "steps": [
                 {
                     "name": "test-step",

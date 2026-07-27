@@ -22,7 +22,8 @@ relations:
   release_packages:
     - scfw
   boards: []
-  tools: []
+  tools:
+    - compile-tool
 
 case_required_for:
   - generated_flashbin
@@ -34,7 +35,10 @@ warnings:
   - flash_a55 and flash_all are soc.mak recipes, not top-level compile targets.
   - RTE name alone must not decide flash_a55 or flash_all.
   - Listed relations are candidate inputs; the actual set must be selected from SoC, board, DDR, software stack, recipe, payload set, and validation goal.
+  - Every candidate component must be declared in the case manifest before compile-tool assess.
+  - DEPENDENCIES.yaml expresses invalidation edges only; it does not select a recipe.
 
 evidence:
   - README.md
+  - DEPENDENCIES.yaml
   - ../../software_stacks/rte.md

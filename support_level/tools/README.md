@@ -21,6 +21,7 @@ tools/
   compile-tool/
     USAGE.md
     REQUEST_SCHEMA.md
+    SOFTWARE_STATE_SCHEMA.md
     compile-tool
   serial-console/
     USAGE.md

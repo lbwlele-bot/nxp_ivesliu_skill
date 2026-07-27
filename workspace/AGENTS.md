@@ -121,6 +121,7 @@
 
 跨 `compile -> board-exec` 推进时，`state/` 里默认使用：
 
+- `software-state.yaml`：由 `compile-tool` 生成，记录当前 case 的已验证软件构建状态
 - `handoff.yaml`：由 `compile` 生成或更新，描述交给板级执行消费的产物和前提
 - `ledger.yaml`：由 `board-exec` 生成或更新，记录当前 case 继续推进所需的最小动态事实
 
@@ -183,6 +184,12 @@
 如果这次编译的结果已经明确要交给 `board-exec` 消费，
 则 `compile` 负责在当前 case 下生成或更新交接实例。
 
+如果编译对象是 `flashbin`，真实编译前还必须先由 `compile-tool assess`
+读取当前 case 的 `records/compile-manifest.yaml`。
+只有工具给出的精确 `REBUILD / REPACK` 集合才能进入 `prepare -> run`；
+`REUSE_ONLY` 不执行编译，`ACQUIRE_REQUIRED` 先走 hash 绑定的源码准备。
+`state/software-state.yaml` 只能由工具生成和更新。
+
 #### 第 5 步：板级执行
 
 产物就绪、要上板验证时，进入 `board-exec`。
@@ -211,9 +218,10 @@
 - 破坏性操作（烧写、覆盖、改配置、装卸软件）动手前先确认；只读 / 查询类（看串口、读日志、grep 代码）可直接做。
 - 共享源码基线原则上保持可还原；允许做源码浏览、版本核对和可逆的 checkout / tag / branch 切换。需要长期保留修改、构建产物或运行态污染时，再转到当前 `../support_level/work/<case>/` 处理。
 - 本工作区所有真实编译统一通过 `compile-tool prepare -> 展示 -> run` 执行；工具不替代原始命令和项目手册。
+- `flashbin` 在 `prepare` 前必须完成 `assess`；禁止手改 `software-state.yaml`、漏掉必需 component 或编译被判定为 `REUSE` 的 component。
 - 如果任务进入真实 case，且后续会跨 `compile -> board-exec` 推进，就启用 case 级状态维护，而不是只依赖对话上下文。
 - 状态实例只落在当前 case 下，不落在全局规则层，也不落在 skill 自己目录里。
-- `compile` 是 `handoff` 的 owner；`board-exec` 是 `ledger` 的 owner；`support` 只负责 case 容器与路径定位，不代写状态判断。
+- `compile-tool` 生成 `software-state`；`compile` 是 `handoff` 的 owner；`board-exec` 是 `ledger` 的 owner；`support` 只负责 case 容器与路径定位，不代写状态判断。
 - `board-exec` 在任何会改变板状态的动作前后，都必须重新探测；旧日志、旧串口观察和单次命令成功，都不能直接覆盖当前事实。
 - 默认用中文交流。
 
