@@ -13,6 +13,7 @@ relations:
   release_packages: []
   boards: []
   tools:
+    - compile-tool
     - serial-console
     - uuu
     - bcu

@@ -1,0 +1,36 @@
+schema_version: 1
+id: compile-tool
+type: host_tool
+human_doc: USAGE.md
+owner: compile
+
+summary: 统一编译执行入口，强制显式声明目标身份、展示原始命令，并用 plan hash 绑定展示内容和实际执行内容。
+
+execution:
+  executable: ./compile-tool
+
+relations:
+  projects: []
+  compile_targets:
+    - flashbin
+    - linux
+    - m_freertos_sdk
+    - zephyr
+    - a55_rtos
+  software_stacks: []
+  release_packages: []
+  boards: []
+  tools: []
+
+case_required_for:
+  - compile_execution
+
+warnings:
+  - The tool validates request shape and command identity, but does not generate or understand project recipes.
+  - Every real compile command in the normal workspace workflow must pass through prepare and hash-bound run.
+  - The complete prepare report and raw commands must be shown to the user before run.
+  - Version 1 is a workspace convention and does not block deliberate direct use of host build binaries.
+
+evidence:
+  - USAGE.md
+  - REQUEST_SCHEMA.md

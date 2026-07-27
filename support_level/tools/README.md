@@ -18,6 +18,10 @@ tools/
   bcu/
     USAGE.md
     bcu
+  compile-tool/
+    USAGE.md
+    REQUEST_SCHEMA.md
+    compile-tool
   serial-console/
     USAGE.md
     serial-console
@@ -43,3 +47,4 @@ tools/
 - `uuu/`
 - `imx-rm/`
 - `serial-console/`
+- `compile-tool/`

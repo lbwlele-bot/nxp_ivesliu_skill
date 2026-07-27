@@ -164,6 +164,22 @@
 这里说的不是一个孤立命令，
 而是进入 `compile` 这个 skill 及其背后的模块化源码说明、构建边界和相关支撑层资料。
 
+源码阅读、依赖分析和编译规划不需要调用执行工具。
+准备执行第一条真实编译命令时，
+必须统一走：
+
+`../support_level/tools/compile-tool/compile-tool`
+
+先按该工具的 schema 在当前 case 中准备编译请求，
+执行 `prepare`，并在 commentary 中向用户完整展示芯片身份、
+身份影响、工作目录、环境变量、原始编译命令和 plan hash；
+随后才能用同一个 hash 执行 `run`。
+展示后不要求用户逐次确认。
+
+规范工作流中不直接执行裸 `make`、`cmake`、`ninja`、`bitbake`
+或其它真实编译命令。
+如果请求内容变化，必须重新 `prepare`、重新展示，再执行。
+
 如果这次编译的结果已经明确要交给 `board-exec` 消费，
 则 `compile` 负责在当前 case 下生成或更新交接实例。
 
@@ -194,6 +210,7 @@
 - 执行任务时，遇到新的、可复用的、有长期价值的信息，先整理到 `../support_level/to_absorb/`，并保留它来自哪个 case。
 - 破坏性操作（烧写、覆盖、改配置、装卸软件）动手前先确认；只读 / 查询类（看串口、读日志、grep 代码）可直接做。
 - 共享源码基线原则上保持可还原；允许做源码浏览、版本核对和可逆的 checkout / tag / branch 切换。需要长期保留修改、构建产物或运行态污染时，再转到当前 `../support_level/work/<case>/` 处理。
+- 本工作区所有真实编译统一通过 `compile-tool prepare -> 展示 -> run` 执行；工具不替代原始命令和项目手册。
 - 如果任务进入真实 case，且后续会跨 `compile -> board-exec` 推进，就启用 case 级状态维护，而不是只依赖对话上下文。
 - 状态实例只落在当前 case 下，不落在全局规则层，也不落在 skill 自己目录里。
 - `compile` 是 `handoff` 的 owner；`board-exec` 是 `ledger` 的 owner；`support` 只负责 case 容器与路径定位，不代写状态判断。

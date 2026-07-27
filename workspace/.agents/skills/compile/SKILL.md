@@ -75,6 +75,39 @@ description: 编译阶段高层路由层（在本机 Ubuntu 上做）。当任�
 不要直接跳到 `imx-atf`、`imx-sm`、`U-Boot` 或 `linux`
 单个项目文档里推断整条 RTE 链路。
 
+## 统一编译执行入口
+
+源码阅读、依赖分析、编译对象判断和命令规划不需要调用工具。
+只有准备执行第一条真实编译命令时，
+才必须进入：
+
+- `../support_level/tools/compile-tool/USAGE.md`
+- `../support_level/tools/compile-tool/compile-tool`
+
+规范流程固定为：
+
+1. 在当前 case 中生成编译请求，推荐位置是
+   `records/compile-request.yaml`
+2. 请求按 `compile-tool/REQUEST_SCHEMA.md` 显式写出：
+   SoC、silicon revision、芯片封装、板型、DDR、软件版本，
+   以及它们对本次编译的影响
+3. 执行 `compile-tool prepare <request>`
+4. 在 commentary 中向用户完整展示 `prepare` 输出的身份、
+   工作目录、环境变量、原始编译命令和 plan hash
+5. 无需逐次等待用户确认，使用同一个 hash 执行
+   `compile-tool run <request> --plan-hash <hash>`
+
+只要身份、工作目录、环境变量或原始命令发生变化，
+旧 hash 就失效；
+必须重新 `prepare`、重新向用户展示，再执行。
+
+在本工作区的规范流程中，
+不直接执行裸 `make`、`cmake`、`ninja`、`bitbake`
+或其它真实编译命令。
+这些原始命令仍由当前 compile target、项目 `USAGE.md`
+和工程判断决定，`compile-tool` 只负责显式展示、绑定和执行，
+不生成 recipe，也不解释命令技术语义。
+
 ### 先只保留到“编译对象 + 最小依赖集合”这一层
 
 `compile` 先判断这次属于哪个编译对象，

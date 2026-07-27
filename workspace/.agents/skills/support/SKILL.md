@@ -108,6 +108,7 @@ description: 支撑层资源入口。用于回答当前 `support_level/` 里有�
 - `bcu`
 - `imx-rm`
 - `serial-console`
+- `compile-tool`
 
 也就是说，如果任务是在找板控工具、烧写工具或本地辅助小工具，先看这里。
 
