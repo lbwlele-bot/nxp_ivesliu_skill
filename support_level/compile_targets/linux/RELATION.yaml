@@ -16,7 +16,8 @@ relations:
     - rte
   release_packages: []
   boards: []
-  tools: []
+  tools:
+    - compile-tool
 
 case_required_for:
   - patched_kernel
@@ -27,6 +28,7 @@ case_required_for:
 warnings:
   - Generic Linux and Real-Time Edge Linux must not be mapped directly to a flash.bin soc.mak recipe.
   - Shared Linux source trees are baselines; case edits and builds must happen under support_level/work/<case>/.
+  - Generic component state does not parse Kbuild; file-level incremental behavior remains owned by Kbuild.
   - If Linux artifacts must enter a boot image, return to the flashbin compile target after preparing them.
 
 evidence:

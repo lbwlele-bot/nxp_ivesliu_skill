@@ -44,6 +44,16 @@
 - 在 SW7/BCU GPIO 路径修复前，启动捕获使用物理重新上电
 - 不通过写 EEPROM 伪装成 B1
 
+2026-08-07 在 case
+`2026-08-06-imx943-dual-m7-udp-rpmsg-latency` 中再次做了 SW7-1 A/B：
+
+- SW7-1=OFF：`get_boot_mode` 成功报告 `remote_en is disabled, boot from BOOT SWITCH`
+- SW7-1=ON：两次独立查询均稳定返回 `0xffffffff`
+- 每次 BCU 后恢复 `if01`，前后 UUU 均为同一 MX943 SDPS 设备
+
+因此 OFF 结果只证明 BCU/FTDI 通信链存活且远程控制被关闭；ON 结果
+仍证明当前 A0 实物的远程 GPIO 控制路径异常，不是一次性 tty 枚举问题。
+
 BCU 对 FT4232H channel 1 的影响和恢复命令由 i.MX943 serial profile
 维护，不在板级 reset 规则里重复。
 
@@ -79,6 +89,9 @@ BCU 对 FT4232H channel 1 的影响和恢复命令由 i.MX943 serial profile
 主板四路 interface、默认 `a-core` / `sm` 捕获、现场字节数和外部 M-core
 UART 边界统一见：
 `../../tools/serial-console/profiles/imx943evk19a0/README.md`。
+
+当前 case 两路外接 M7 TTL 的本机物理路径和待定归属见：
+`../../work/2026-08-06-imx943-dual-m7-udp-rpmsg-latency/records/SERIAL_TOPOLOGY.md`。
 
 ## 已验证的异构核约束
 

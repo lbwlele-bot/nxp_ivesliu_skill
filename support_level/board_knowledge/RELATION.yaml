@@ -15,6 +15,7 @@ relations:
     - imx8dxlevk
     - imx93evk14
     - imx943evk19a0
+    - imx943evk19b1
     - imx95evk19
   tools:
     - serial-console

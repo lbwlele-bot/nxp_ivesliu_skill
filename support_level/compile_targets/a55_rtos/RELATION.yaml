@@ -1,0 +1,30 @@
+schema_version: 1
+id: a55_rtos
+type: compile_target
+human_doc: README.md
+owner: compile
+
+summary: A55 RTOS/HMC 编译对象，负责 case 内显式声明的多仓输入和产物。
+
+relations:
+  projects:
+    - heterogeneous-multicore
+  compile_targets:
+    - flashbin
+  software_stacks: []
+  release_packages: []
+  boards: []
+  tools:
+    - compile-tool
+
+case_required_for:
+  - generated_a55_rtos_artifact
+
+warnings:
+  - managed_git_set is not a workspace lock and does not imply that every local HMC repository is included.
+  - compile-tool does not parse west manifests or generate west recipes.
+  - A55 RTOS output is not automatically a complete flash.bin.
+
+evidence:
+  - README.md
+  - ../../tools/compile-tool/USAGE.md

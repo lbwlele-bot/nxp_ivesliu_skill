@@ -1,27 +1,45 @@
 # compile-tool
 
 - 程序入口：`./compile-tool`
-- 工具角色：编译身份门禁、flashbin 软件状态评估、原始命令展示和绑定执行
+- 工具角色：component 参数守门、软件状态观察、执行范围限制和状态记录
+- 参数规则：compile target / project / workspace 旁边的 `COMPILE_POLICY.yaml`
 - manifest / state schema：`SOFTWARE_STATE_SCHEMA.md`
-- compile request schema：`REQUEST_SCHEMA.md`
+- request schema：`REQUEST_SCHEMA.md`
 
 ## 使用边界
 
-本工具不解析 Makefile，不生成 recipe，也不替代：
+本工具不解析 Makefile、Kbuild 或 west manifest，不生成 recipe，也不替代
+compile target、项目 `USAGE.md` 和工程判断。
 
-- `compile`
-- `compile_targets/<target>/README.md`
-- 源码项目或工作区的 `USAGE.md`
+它不要求所有编译都填写 SoC、silicon revision、封装、板型、DDR 和软件版本。
+普通参数可以省略，也可以明确标成 assumption/default。只有
+`COMPILE_POLICY.yaml` 命中的已知风险参数会成为阻断规则。
 
-首版只有 `flashbin` 启用软件状态与最小重编强制约束。
-其他 compile target 仍使用 schema v1 的身份和原始命令门禁，
-输出会明确标记“尚未启用最小重编约束”。
+当前已知规则：
 
-工具不会从主机层阻止故意调用裸 `make`、`cmake`、`ninja` 或 `bitbake`。
+- 编译 OEI 时，silicon revision 必须询问用户，不能猜或使用默认值
+- 使用 imx-mkimage 打包 flashbin 时同样如此
+- 两类 make 命令都必须显式包含相同的 `REV=<value>`
+- SMFW 重编必须删除 `make cfg` 的生成目录，再执行
+  `really-clean -> cfg -> all`
 
-## flashbin 标准流程
+是否重编由 LLM 根据任务目标、代码改动和工程判断决定。`assess` 只提供
+状态证据；工具不会把观察到的差异自动变成必须执行的命令。
 
-当前 case 固定使用：
+工具不会从主机层阻止故意调用裸 `make`、`cmake`、`ninja`、`bitbake`
+或 `west`。
+
+## 标准流程
+
+通用 target：
+
+```text
+records/compile/<target>/manifest.yaml
+records/compile/<target>/request.yaml
+state/software-state.yaml
+```
+
+flashbin 深度模式：
 
 ```text
 records/compile-manifest.yaml
@@ -29,69 +47,156 @@ records/compile-request.yaml
 state/software-state.yaml
 ```
 
-`compile-manifest.yaml` 是声明文件，由当前任务准备；
-`software-state.yaml` 只能由工具生成和更新，不应手改。
-
 先评估：
 
 ```bash
-../support_level/tools/compile-tool/compile-tool assess \
-  ../support_level/work/<case>/records/compile-manifest.yaml
+compile-tool requirements <manifest>
+compile-tool assess <manifest>
 ```
 
-如果结果是 `ACQUIRE_REQUIRED`，输出会完整显示本地源码准备命令和
-acquisition plan hash。使用同一 hash 执行：
+如果是 `ACQUIRE_REQUIRED`，使用 assess 显示的 acquisition hash：
 
 ```bash
-../support_level/tools/compile-tool/compile-tool acquire \
-  ../support_level/work/<case>/records/compile-manifest.yaml \
-  --plan-hash sha256:<digest>
+compile-tool acquire <manifest> --plan-hash sha256:<digest>
 ```
 
-重新 `assess` 后：
+重新 assess 后，`READY` 会同时显示：
 
-- `REUSE_ONLY`：已有产物可信，不生成编译请求
-- `READY`：按输出的 `REBUILD / REPACK` 精确生成 schema v2 请求
-- `BLOCKED`：先解决身份、路径、来源、状态或固定输入问题
+- `MATCHED`：当前记录和现场状态一致
+- `CHANGES_OBSERVED`：观察到源码、配置、工具、输入或产物差异
 
-对 `READY` 请求继续执行：
+LLM 再决定复用还是生成 schema v2 request，并在 `decision.scope/reason`
+中声明本轮直接变更范围和理由。观察结果不是强制动作集合。
+
+执行：
 
 ```bash
-../support_level/tools/compile-tool/compile-tool prepare \
-  ../support_level/work/<case>/records/compile-request.yaml
-
-../support_level/tools/compile-tool/compile-tool run \
-  ../support_level/work/<case>/records/compile-request.yaml \
-  --plan-hash sha256:<digest>
+compile-tool prepare <request>
+compile-tool run <request>
 ```
 
-`prepare` 必须在 commentary 中完整展示身份、assessment hash、最小动作集合、
-工作目录、环境变量和原始 shell 命令。
+`prepare` 完整显示显式参数、状态摘要、LLM 决策范围、cwd、环境变量和
+原始 shell 命令；`run` 重新读取并校验当前 request 后直接执行。
 
-## 强制行为
+assessment hash、source acquisition hash 和 state integrity hash 继续保留，
+因为它们分别用于状态过期、源码准备计划和状态损坏检测，不用于绑定
+prepare/run 命令文本。
 
-- flashbin manifest 必须覆盖 dependency profile 中的全部候选组件
-- 未使用组件必须是 `not_applicable + reason`
-- 所有编译 cwd 必须在当前 case 下，canonical `code_assets` 只作只读基线
-- 请求中的 component unit 必须与 assessment 的最小动作集合完全一致
-- `prepare` 和 `run` 都重新评估；状态变化后旧 hash 失效
-- 每个 unit 成功后立即验证产物并原子记录状态
-- 后续 unit 失败，不撤销之前已经验证成功的组件状态
-- case 级文件锁阻止两个 compile-tool 流程并发修改同一状态
+## 源码与构建执行边界
 
-源码解析顺序：
+managed Git 的 `sources/<repo>` 只承载源码身份：HEAD、tracked diff 和
+非 ignored 的 untracked 文件。构建生成物不能靠 `.gitignore`、manifest
+排除列表或其它白名单从源码指纹中隐藏。
 
-1. 可信的当前 case checkout
-2. canonical repo 中已有的本地 ref
-3. hash 绑定的 `git pull --ff-only` 或定向 `git fetch`
-4. 缺失的外部源码或 release 包返回 `BLOCKED`，不自动下载
+执行分为两种硬边界：
 
-源码树只读取 Git commit、tracked diff 和非 ignored 新文件；
-不会递归哈希未修改的 tracked 文件。
+- out-of-tree：step cwd 必须位于 managed Git 源码树之外；构建前后仍严格
+  比较原始源码指纹。
+- `isolated_git`：由 `COMPILE_POLICY.yaml` 对已知 in-tree component 强制；
+  `run` 将当前 commit、tracked patch、untracked 文件和符号链接精确物化到
+  `build/.compile-tool/<target>/<component>/source/`，全部 step cwd 必须位于
+  该副本内。
+
+隔离副本是 compile-tool 自有的可重建执行现场。构建失败时保留现场但不写
+成功状态；下一次执行前重新物化。即使使用隔离副本，命令若越界修改原始
+`sources/<repo>`，构建后源码一致性检查仍会阻断。
+
+没有 `isolated_git` policy 的 managed Git component 若直接把源码目录作为
+cwd，`prepare` 和 `run` 都会阻断；项目应改为真正的 out-of-tree 构建，或在
+对应长期 policy 中声明隔离执行，不能添加生成路径排除规则。
+
+## 决策范围和 destructive 操作
+
+schema v2 请求必须包含：
+
+```yaml
+decision:
+  scope: [smfw]
+  reason: 修改了 SMFW 配置
+  destructive: {}
+```
+
+工具只允许执行 scope 中的组件及 manifest 明确声明的下游组件。
+flashbin 的上游组件进入 scope 后必须包含最终 `flashbin repack`，无关的
+ATF、U-Boot 等平级组件不能顺带加入。
+
+普通组件使用 `make clean/distclean/mrproper/really-clean` 或递归强制
+`rm` 时，必须在 `decision.destructive.<component>` 写明理由。工具只要求
+显式化，不判断工程理由是否正确。SMFW policy 自带的精确刷新序列不需要
+重复填写 destructive 理由。
+
+## 参数规则
+
+`COMPILE_POLICY.yaml` 是长期模板，说明某个 target/component 有哪些
+危险参数必须被显式处理。manifest 是当前 case 的实例，只填写本次实际值
+和信息来源。
+
+LLM 不需要记忆每个 component 的参数列表。准备真实编译前先执行：
+
+```bash
+compile-tool requirements <manifest>
+```
+
+该命令会按 manifest 中的 target 和 component 集合加载所有命中的
+`COMPILE_POLICY.yaml`，并列出必须用户确认或必须显式传入命令的参数。
+加载范围是当前 `compile_targets/<target>/COMPILE_POLICY.yaml`，以及与
+component 同名的 `code_assets/projects/<component>/COMPILE_POLICY.yaml`
+或 `code_assets/workspaces/<component>/COMPILE_POLICY.yaml`。
+
+manifest 示例：
+
+```yaml
+parameters:
+  silicon_revision:
+    value: B0
+    source: user
+```
+
+如果 flashbin manifest 缺失该参数、值为 unknown/N/A、source 不是 user，
+`assess` 会返回 `BLOCKED` 并要求先询问用户。
+
+即使参数已经声明，下面的命令仍会阻断：
+
+```bash
+make SOC=iMX95 OEI=YES flash_all
+```
+
+必须显式绑定：
+
+```bash
+make SOC=iMX95 REV=B0 OEI=YES flash_all
+```
+
+未来增加已确认的危险点时，优先在对应 compile target、源码项目或
+workspace 旁边增加一条 `COMPILE_POLICY.yaml` 规则，不增加全局必填字段，
+也不增加新的 Python profile。
+
+SMFW 还需要：
+
+```yaml
+parameters:
+  smfw_config:
+    value: other/mx95rte
+    source: project
+```
+
+它决定允许删除的唯一生成目录 `configs/<smfw_config>/`。源配置
+`configs/<smfw_config>.cfg` 和整个 `configs/` 目录都禁止删除。
+
+## 软件状态
+
+- flashbin 使用固定依赖图的深度模式
+- 其他 target 使用通用状态单元，只传播 manifest 明确声明的依赖
+- canonical 源码只作来源，编译 cwd 必须位于 case
+- 每个成功 component 立即原子记录
+- Git 只采集 HEAD、tracked diff 和非 ignored 新文件
+- 非 Git 内容只采集显式 watched inputs
+- flashbin 记录各启用输入产物和最终 `flash.bin` 的 SHA-256
+- 不记录命令 hash；命令文本不参与软件状态或依赖身份
 
 ## 退出状态
 
-- `0`：评估可继续、无需编译，或命令执行成功
-- `2`：schema、身份、路径、状态、hash 或最小动作集合不合法
-- `3`：`assess` 发现必须先执行 `acquire`
-- 其它非零值：源码准备或实际编译命令的退出码
+- `0`：状态观察完成或执行成功
+- `2`：schema、参数规则、路径、状态、hash 或执行范围不合法
+- `3`：必须先执行 acquire
+- 其他非零值：源码准备或实际编译命令退出码

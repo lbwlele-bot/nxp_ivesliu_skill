@@ -16,6 +16,12 @@
 
 ## 下载态识别
 
+- 当前 B0 LPDDR4 EVK 实物已验证的 ROM Serial Downloader / UUU
+  物理接口是板上 `J15 / USB_OTG2` Type-C。
+- 连接 `J46 / USB_OTG1` 时本机未观察到 NXP USB 枚举；改接
+  `J15 / USB_OTG2` 后观察到 `1fc9:0147` 和 `MX8DXL SDPS`。
+- 这是当前 EVK 样板的实测连接事实，不自动外推到客户自研板或
+  其它 board revision；更换实物后仍要按原理图和 fresh probe 重新确认。
 - `lsusb` 看到：
   `1fc9:0147 FA Blank 8DXL`
   表示板子在 ROM USB download
@@ -143,6 +149,49 @@ first-stage A1 regression flash.bin: SDPS -> FB
   且已有证据证明当前处于同一 `FB` 会话时，才复用该会话
 - 如果板子已经在 `FB`，重跑同样命令不能重新证明 `SDPS -> FB`
 - UUU 写入成功不能直接证明最终 SD boot 运行态成立
+
+### 当前 B0 `M=1` 完整镜像实测
+
+严格限定于 i.MX8DXL EVK B0、LPDDR4、BSP `lf-6.18.2-1.0.0`、
+SCFW 1.18.0 DXL porting kit `M=1 U=2`、当前已验证 U-Boot/SPL 和
+完整 `flash_linux_m4` 的组合：
+
+- 目标图 `flash_m_1.bin`，SHA-256：
+  `0ccd0241a8b6b29f35d4628e3101eda56cfa51b3348e8470eeade066425bf78b`
+- 该目标图已从 fresh `MX8DXL SDPS` 直接启动 SPL/U-Boot、建立
+  `FB`，并由 `-b sd` recipe 写入 SD `bootloader`；没有使用默认
+  完整镜像搭桥。
+- 随后的 SD 冷启动进一步确认了写入身份：SCFW 出现
+  debug monitor，M4 RPMsg link/nameservice 正常，Linux remoteproc attach
+  和 RPMsg channel 创建正常。
+- 因此“`M=1` 完整镜像必须通过两步 UUU 写入”在当前组合上
+  已被实测反证；两步流程仍可能属于其它 revision、release、
+  image recipe 或 loader 的有效方案，不能由本 case 否定。
+
+原始 A/B 和 SD 冷启动证据见：
+
+- `../../work/2026-08-03-imx8dxl-independent-partition-off-restart/records/uuu-ab-validation.md`
+
+## SCFW 1.18.0 DXL debug monitor 实测
+
+以下命令行为仅在当前 i.MX8DXL B0 LPDDR4 样板、SCFW 1.18.0 DXL
+porting kit `M=1 U=2` debug monitor 上实测：
+
+- monitor 不支持 `help`，输入后返回 `Unknown cmd!`。
+- 只读 `info` 可正常返回 SCFW 身份和启动信息，可用于确认
+  monitor 命令分发正常。
+- 最终链接的 precompiled `monitor.o` command table 中存在精确
+  `boot` 和 `reboot` token；这只能证明命令存在，不应为了取证而
+  执行它们改变板级状态。
+- `md.w <address> <count>` 的 `count` 是 16-bit word 数；读取完整
+  4 KiB 区域应使用 `count=2048`，不是 `1024`。
+- 这些观察不得默认外推到其它 SCFW 版本、SoC 或未复测的 monitor
+  对象。
+
+原始 monitor 和 TCM dump 证据分别见：
+
+- `../../work/2026-08-03-imx8dxl-independent-partition-off-restart/records/scfw-monitor-command-evidence.md`
+- `../../work/2026-08-04-imx8dxl-m4-selfoff-tcm-retention/records/board-test-cycle1.md`
 
 ## 启动交接
 

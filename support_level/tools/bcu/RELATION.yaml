@@ -21,6 +21,7 @@ relations:
   boards:
     - imx8dxlevk
     - imx943evk19a0
+    - imx943evk19b1
     - imx95evk19
   tools: []
 

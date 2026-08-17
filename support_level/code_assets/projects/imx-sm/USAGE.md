@@ -68,27 +68,34 @@ configs/other/mx95rte.cfg
 
 ## 构建命令形态
 
-官方 README 给出的命令形态是：
+`make cfg` 会从 `configs/<config>.cfg` 生成目录 `configs/<config>/`。
+这个生成目录不会被 `make really-clean` 删除，残留内容可能使新的 cfg
+没有完全生效。因此当前工作区的完整刷新命令是：
 
 ```bash
 cd /home/ives/桌面/NXP_v2/support_level/work/<case>/imx-sm
+rm -rf configs/mx95evk
+make really-clean
 make config=mx95evk cfg
 make config=mx95evk all
 ```
 
-其中 `cfg` 通常用于配置文件改动后重新生成配置，
-`all` 用于构建产物。
+只能删除不带 `.cfg` 后缀的生成目录。不要删除 `configs/mx95evk.cfg`，
+也不要删除整个 `configs/`。
 
 RTE 配置如果已经由上层判定为当前目标，命令形态是：
 
 ```bash
 cd /home/ives/桌面/NXP_v2/support_level/work/<case>/imx-sm
+rm -rf configs/other/mx95rte
+make really-clean
 make config=other/mx95rte cfg
 make config=other/mx95rte all
 ```
 
 这些是命令形态，不是固定 case 配方。
 实际 `config=`、toolchain、patch、debug 和输出目录必须按当前 case 确认。
+flashbin 工作流中的这个顺序由 `compile-tool` 的 SMFW policy 强制检查。
 
 ## 产物交接
 

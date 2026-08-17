@@ -64,7 +64,13 @@ class SerialConsoleTests(unittest.TestCase):
         )
         self.assertEqual(
             profile_dirs,
-            ["imx8dxlevk", "imx93evk14", "imx943evk19a0", "imx95evk19"],
+            [
+                "imx8dxlevk",
+                "imx93evk14",
+                "imx943evk19a0",
+                "imx943evk19b1",
+                "imx95evk19",
+            ],
         )
         for board in profile_dirs:
             profile = serial_console.load_profile(board)

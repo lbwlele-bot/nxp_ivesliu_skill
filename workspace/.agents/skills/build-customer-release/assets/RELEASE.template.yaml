@@ -1,0 +1,15 @@
+schema_version: 1
+name: REPLACE_WITH_RELEASE_NAME
+audience: customer_integration
+summary: REPLACE_WITH_CUSTOMER_FACING_SUMMARY
+baselines:
+  - component: REPLACE_WITH_COMPONENT
+    version: REPLACE_WITH_VERSION_OR_COMMIT
+contents:
+  patches: []
+  binaries: []
+  reference: []
+validation:
+  passed: []
+  waived: []
+  not_verified: []

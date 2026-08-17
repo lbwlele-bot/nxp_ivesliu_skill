@@ -26,6 +26,17 @@
 - 再把 SDK 解压到 `../../work/<case>/`
 - 真正做 case 构建时，从 case 目录里的 SDK 工程开始
 
+## compile-tool 状态边界
+
+真实构建前，在当前 case 的
+`records/compile/m_freertos_sdk/manifest.yaml` 中把本地 SDK 包声明为
+`release_archive`，并声明 case 解包位置、实际工程输入、工具和 payload。
+`acquire` 负责安全解包；包缺失时不会联网或替换成相近版本。
+
+`SDK_2_9_0_EVK-MIMX8DXL` 与 `GCC 9.2.1` 的对应关系是当前唯一
+由 compile-tool 阻断的 SDK 工具链硬规则。其他 SDK/工具链组合只记录和展示，
+是否支持仍以发布包文档和实际构建证据为准。
+
 如果作为独立产物：
 
 - 这里负责产出可被后续加载路径消费的 M 核二进制

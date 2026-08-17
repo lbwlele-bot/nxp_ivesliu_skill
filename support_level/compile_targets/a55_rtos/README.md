@@ -36,6 +36,16 @@
 - 如果是，再进入 `../../code_assets/workspaces/hmc-workspace/README.md`
 - 再由该工作区和 `heterogeneous-multicore` 本体决定具体构建动作
 
+## compile-tool 状态边界
+
+真实构建前，在当前 case 的 `records/compile/a55_rtos/manifest.yaml`
+中通过 `managed_git_set` 显式列出本次实际使用的 HMC 仓、配置、工具和输出。
+工具不会把整个 workspace 自动变成 lock，也不会解析 west manifest；
+未纳入的仓只提示，由本次工程判断决定是否补进 manifest。
+
+`west build`、`west sdk_build` 等命令仍由工作区规则给出，
+compile-tool 只负责原样展示、限制声明范围、执行并记录产物状态。
+
 与 `flashbin` 的关系：
 
 - `a55_rtos` 负责 A 核 RTOS / HMC 自己的构建入口和联动输入边界

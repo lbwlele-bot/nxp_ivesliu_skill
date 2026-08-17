@@ -1,0 +1,28 @@
+schema_version: 1
+id: zephyr
+type: compile_target
+human_doc: README.md
+owner: compile
+
+summary: Zephyr 编译对象，负责 case 内显式声明的 app、board、配置和产物。
+
+relations:
+  projects: []
+  compile_targets: []
+  software_stacks: []
+  release_packages: []
+  boards: []
+  tools:
+    - compile-tool
+
+case_required_for:
+  - generated_zephyr_artifact
+
+warnings:
+  - managed_git_set is an explicit source list, not a west workspace lock.
+  - compile-tool does not run west update or infer repositories omitted from the manifest.
+  - Whether west build uses -p always remains a project-level decision.
+
+evidence:
+  - README.md
+  - ../../tools/compile-tool/USAGE.md

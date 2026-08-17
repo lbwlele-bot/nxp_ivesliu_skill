@@ -16,6 +16,7 @@ reset 或改变 boot mode。
 - `imx8dxlevk`：四路 onboard FT4232H 映射完整验证
 - `imx93evk14`：四路 onboard FT4232H 映射完整验证
 - `imx943evk19a0`：四路 onboard FT4232H 映射完整验证
+- `imx943evk19b1`：四路 onboard FT4232H 物理映射已验证，运行时 role 部分确认
 - `imx95evk19`：部分映射，`if01` role 尚未确认
 
 新增板型必须先保留 discovery 原始日志，再按 `../PROFILE_SCHEMA.md` 增加

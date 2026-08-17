@@ -324,6 +324,7 @@ port3
 - `profiles/imx8dxlevk/serial.yaml`：完整已验证
 - `profiles/imx93evk14/serial.yaml`：完整已验证
 - `profiles/imx943evk19a0/serial.yaml`：完整已验证
+- `profiles/imx943evk19b1/serial.yaml`：物理四路已验证，运行时 role 映射部分确认
 - `profiles/imx95evk19/serial.yaml`：部分映射
 
 工具目录包含程序、profile、板型串口说明、schema 和测试。发布时应整体打包

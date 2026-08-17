@@ -26,6 +26,17 @@ Linux 线的选择可以影响 U-Boot、DTB、kernel、rootfs 或板级验证内
 - 再进入对应项目 `USAGE.md`
 - 需要 case 构建时，复制到 `../../work/<case>/` 再做
 
+## compile-tool 状态边界
+
+真实构建前，在当前 case 的 `records/compile/linux/manifest.yaml`
+中只声明本次需要的 component，例如 `image`、某个 `dtb` 或 `modules`。
+canonical Linux 仓只作为来源，构建 cwd 和输出必须位于 case。
+
+工具只观察这些 component 的显式源码、配置、工具和产物状态。
+LLM 再决定本轮要重编哪个 component，并在 request 中声明 scope 和理由；
+工具阻止 scope 外组件和未声明的全量 clean。源码或配置变化后，
+文件级增量继续完全交给 Kbuild，compile-tool 不解析 Kbuild。
+
 与 `flashbin` 的关系：
 
 - 如果只是改 kernel / dtb / modules，

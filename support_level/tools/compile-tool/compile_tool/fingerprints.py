@@ -5,9 +5,18 @@ import os
 from pathlib import Path
 import subprocess
 import tempfile
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
-from .common import ToolError, hash_data, hash_file, render_argv, run_command
+from .common import (
+    ToolError,
+    hash_data,
+    hash_file,
+    load_yaml,
+    mapping_value,
+    render_argv,
+    run_command,
+)
 
 
 def _stat_payload(path: Path) -> dict[str, int]:
@@ -110,8 +119,9 @@ def _stream_hash(argv: list[str], cwd: Path) -> str:
             raise ToolError(f"cannot run {render_argv(argv)}: {exc}") from exc
         if process.stdout is None:
             raise ToolError(f"cannot capture output from {render_argv(argv)}")
-        for block in iter(lambda: process.stdout.read(1024 * 1024), b""):
-            digest.update(block)
+        with process.stdout:
+            for block in iter(lambda: process.stdout.read(1024 * 1024), b""):
+                digest.update(block)
         result = process.wait()
         stderr_handle.seek(0)
         stderr = stderr_handle.read()
@@ -188,6 +198,68 @@ def source_snapshot(
             }
         )
         return result
+    if source["kind"] == "managed_git_set":
+        previous_repositories = {
+            entry["name"]: entry
+            for entry in (previous or {}).get("repositories", [])
+            if isinstance(entry, dict) and isinstance(entry.get("name"), str)
+        }
+
+        def snapshot_repository(repository: dict[str, Any]) -> dict[str, Any]:
+            member = {
+                key: value
+                for key, value in repository.items()
+                if key != "name"
+            }
+            return {
+                "name": repository["name"],
+                "snapshot": source_snapshot(
+                    member,
+                    previous_repositories.get(repository["name"], {}).get(
+                        "snapshot"
+                    ),
+                ),
+            }
+
+        with ThreadPoolExecutor(
+            max_workers=min(6, len(source["repositories"]))
+        ) as executor:
+            repositories = list(
+                executor.map(snapshot_repository, source["repositories"])
+            )
+        return {"kind": "managed_git_set", "repositories": repositories}
+    if source["kind"] == "release_archive":
+        archive_path = Path(source["archive_path"])
+        marker_path = Path(source["case_path"]) / ".compile-tool-source.yaml"
+        marker_data = mapping_value(
+            load_yaml(marker_path, "release archive marker"),
+            "release archive marker",
+        )
+        archive_stat = _stat_payload(archive_path)
+        if (
+            marker_data.get("archive_path") != str(archive_path)
+            or marker_data.get("archive_stat") != archive_stat
+            or not isinstance(marker_data.get("sha256"), str)
+        ):
+            raise ToolError(
+                f"release archive marker does not match the local package: {archive_path}"
+            )
+        archive = {
+            "path": str(archive_path),
+            "stat": archive_stat,
+            "sha256": marker_data["sha256"],
+        }
+        marker = file_snapshot(
+            marker_path,
+            (previous or {}).get("marker"),
+            require_nonempty=True,
+        )
+        return {
+            "kind": "release_archive",
+            "case_path": source["case_path"],
+            "archive": archive,
+            "marker": marker,
+        }
     previous_files = (previous or {}).get("files")
     return {
         "kind": "local_files",
@@ -197,6 +269,83 @@ def source_snapshot(
             require_nonempty=False,
         ),
     }
+
+
+def _symlink_snapshot(path: Path, previous: dict[str, Any] | None) -> dict[str, Any]:
+    try:
+        info = path.lstat()
+        target = os.readlink(path)
+    except OSError as exc:
+        raise ToolError(f"cannot inspect watched symlink {path}: {exc}") from exc
+    stat_payload = {
+        "size": info.st_size,
+        "inode": info.st_ino,
+        "mtime_ns": info.st_mtime_ns,
+        "ctime_ns": info.st_ctime_ns,
+    }
+    digest = (
+        previous["sha256"]
+        if previous
+        and previous.get("path") == str(path)
+        and previous.get("stat") == stat_payload
+        and isinstance(previous.get("sha256"), str)
+        else hash_data({"target": target})
+    )
+    return {
+        "path": str(path),
+        "kind": "symlink",
+        "stat": stat_payload,
+        "sha256": digest,
+    }
+
+
+def watched_input_snapshots(
+    roots: list[str],
+    previous: list[dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
+    previous_by_path = {
+        entry["path"]: entry
+        for entry in (previous or [])
+        if isinstance(entry, dict) and isinstance(entry.get("path"), str)
+    }
+    paths: list[Path] = []
+    for value in roots:
+        root = Path(value)
+        if root.is_symlink() or root.is_file():
+            paths.append(root)
+            continue
+        if not root.is_dir():
+            raise ToolError(f"watched input is missing: {root}")
+        for directory, dirnames, filenames in os.walk(root, followlinks=False):
+            base = Path(directory)
+            symlink_dirs = [
+                name for name in dirnames if (base / name).is_symlink()
+            ]
+            for name in symlink_dirs:
+                paths.append(base / name)
+                dirnames.remove(name)
+            paths.extend(base / name for name in filenames)
+
+    result: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for path in sorted(paths, key=lambda item: str(item)):
+        path_text = str(path)
+        if path_text in seen:
+            continue
+        seen.add(path_text)
+        if path.is_symlink():
+            result.append(_symlink_snapshot(path, previous_by_path.get(path_text)))
+        elif path.is_file():
+            snapshot = file_snapshot(
+                path,
+                previous_by_path.get(path_text),
+                require_nonempty=False,
+            )
+            snapshot["kind"] = "file"
+            result.append(snapshot)
+        else:
+            raise ToolError(f"unsupported watched input entry: {path}")
+    return result
 
 
 def configuration_snapshot(
@@ -228,6 +377,11 @@ def toolchain_snapshots(toolchains: list[dict[str, Any]]) -> list[dict[str, Any]
         )
         result.append(
             {
+                **(
+                    {"name": toolchain["name"]}
+                    if "name" in toolchain
+                    else {}
+                ),
                 "executable": str(executable.resolve()),
                 "version_args": toolchain["version_args"],
                 "version_sha256": hash_data({"output": version_output}),

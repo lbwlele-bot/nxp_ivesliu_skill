@@ -33,7 +33,9 @@ description: NXP i.MX 工作区的高阶理解入口。所有任务开工先读�
    转到 `compile`
 4. 已经要触碰真实板子、USB、串口、boot mode、烧写或运行态：
    转到 `board-exec`
-5. 同时涉及多个阶段：
+5. 当前产物和验证证据已有，需要生成客户 release 包：
+   转到 `build-customer-release`
+6. 同时涉及多个阶段：
    只按当前最先需要解决的 unresolved step 选择 owner，
    完成后再显式交接，不预设一次走完整链路
 
@@ -142,6 +144,7 @@ release demo 不是绝对不会有缺陷，
 - 资源、资产、路径、文档和已有基线位置：`support`
 - 构建对象、输入依赖、编译和打包：`compile`
 - 真实板状态、USB、串口、板控、烧写、启动和运行态：`board-exec`
+- 从 case 证据生成精简、可验证的客户交付包：`build-customer-release`
 - 工具参数和具体命令：对应工具 `USAGE.md`，并由当前 owner 执行
 
 `understanding` 可以直接完成高阶概念分析，

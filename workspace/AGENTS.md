@@ -26,6 +26,7 @@
 | `support` | 找镜像/固件/手册/原理图/工具/源码——查它们各在哪、各自负责什么。 |
 | `compile` | 编译阶段：理运行链路、定最小模块集合、在本机出产物/镜像。 |
 | `board-exec` | 板级执行阶段：在本机烧写、抓串口、看板子运行，并明确当前板控阶段、异构核约束和下一步允许动作。 |
+| `build-customer-release` | 从当前 case 生成客户集成视角的 release 包：一份主 README、组件 patch、必要产物/参考和校验，并阻止文档堆、不可应用 patch 和只过语法的错误脚本。 |
 
 `compile` 与 `board-exec` 是主阶段分工，不是硬互斥。
 默认按需读取，当前 unresolved step 落在哪一层，就以哪层为主。
@@ -172,22 +173,32 @@
 `../support_level/tools/compile-tool/compile-tool`
 
 先按该工具的 schema 在当前 case 中准备编译请求，
-执行 `prepare`，并在 commentary 中向用户完整展示芯片身份、
-身份影响、工作目录、环境变量、原始编译命令和 plan hash；
-随后才能用同一个 hash 执行 `run`。
+执行 `prepare`，并在 commentary 中向用户完整展示受约束参数、
+工作目录、环境变量和原始编译命令；随后执行 `run`。
 展示后不要求用户逐次确认。
 
 规范工作流中不直接执行裸 `make`、`cmake`、`ninja`、`bitbake`
 或其它真实编译命令。
 如果请求内容变化，必须重新 `prepare`、重新展示，再执行。
 
+不要把 SoC、silicon revision、封装、板型、DDR 和软件版本做成
+所有编译对象的全局必填身份。只有被 `COMPILE_POLICY.yaml`
+命中的 component 参数才强制阻断。
+LLM 不靠记忆猜参数清单；真实编译前先用
+`compile-tool requirements <manifest>` 查看当前 component 触发的硬规则。
+当前 OEI 和 imx-mkimage/flashbin 的 silicon revision 必须询问用户，
+并在对应 make 命令中显式传递 `REV=<value>`；不能猜测或依赖默认值。
+
 如果这次编译的结果已经明确要交给 `board-exec` 消费，
 则 `compile` 负责在当前 case 下生成或更新交接实例。
 
-如果编译对象是 `flashbin`，真实编译前还必须先由 `compile-tool assess`
-读取当前 case 的 `records/compile-manifest.yaml`。
-只有工具给出的精确 `REBUILD / REPACK` 集合才能进入 `prepare -> run`；
-`REUSE_ONLY` 不执行编译，`ACQUIRE_REQUIRED` 先走 hash 绑定的源码准备。
+凡使用 schema v2 维护软件状态的编译对象，真实编译前必须先由
+`compile-tool assess` 读取当前 case 的 manifest。
+通用 target 推荐放在 `records/compile/<target>/manifest.yaml`；
+flashbin 深度模式继续使用 `records/compile-manifest.yaml`。
+`assess` 只提供 `MATCHED / CHANGES_OBSERVED` 状态证据，不替 LLM 决定重编。
+LLM 必须在 request 中声明 `decision.scope/reason`；工具只允许执行该 scope
+及 manifest 明确声明的下游组件。`ACQUIRE_REQUIRED` 先走 hash 绑定的源码准备。
 `state/software-state.yaml` 只能由工具生成和更新。
 
 #### 第 5 步：板级执行
@@ -210,6 +221,18 @@
 拿串口/运行日志当反馈定位问题。
 需要改代码就回到第 3/4 步，形成闭环。
 
+#### 第 7 步：生成客户交付包
+
+用户要求“客户包”、“release 包”或“交付包”时，
+进入 `build-customer-release`。
+
+默认是客户集成包，不是内部全过程复制：
+
+- 一份根 README 说清思路、修改、原因、移植和限制；
+- 从干净 baseline 生成并验证 patch；
+- 构建/烧写脚本默认不入包，确需入包时必须通过语义检查；
+- 只有 case 证据支持的结论才能写成已验证。
+
 ## 核心规矩
 
 - 信息不全先问，不替用户猜芯片 / 版本 / 板卡状态 / 路径。
@@ -218,7 +241,9 @@
 - 破坏性操作（烧写、覆盖、改配置、装卸软件）动手前先确认；只读 / 查询类（看串口、读日志、grep 代码）可直接做。
 - 共享源码基线原则上保持可还原；允许做源码浏览、版本核对和可逆的 checkout / tag / branch 切换。需要长期保留修改、构建产物或运行态污染时，再转到当前 `../support_level/work/<case>/` 处理。
 - 本工作区所有真实编译统一通过 `compile-tool prepare -> 展示 -> run` 执行；工具不替代原始命令和项目手册。
-- `flashbin` 在 `prepare` 前必须完成 `assess`；禁止手改 `software-state.yaml`、漏掉必需 component 或编译被判定为 `REUSE` 的 component。
+- schema v2 target 在 `prepare` 前必须完成 `assess`；禁止手改
+  `software-state.yaml` 或把 decision scope 之外的组件塞进请求。
+  状态观察为 `REUSE` 不禁止 LLM 基于明确理由主动重编。
 - 如果任务进入真实 case，且后续会跨 `compile -> board-exec` 推进，就启用 case 级状态维护，而不是只依赖对话上下文。
 - 状态实例只落在当前 case 下，不落在全局规则层，也不落在 skill 自己目录里。
 - `compile-tool` 生成 `software-state`；`compile` 是 `handoff` 的 owner；`board-exec` 是 `ledger` 的 owner；`support` 只负责 case 容器与路径定位，不代写状态判断。

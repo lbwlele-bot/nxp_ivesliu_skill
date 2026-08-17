@@ -42,6 +42,7 @@ workspace/.agents/skills/*
 !workspace/.agents/skills/compile/
 !workspace/.agents/skills/support/
 !workspace/.agents/skills/understanding/
+!workspace/.agents/skills/build-customer-release/
 workspace/.agents/skills/board-exec/*
 workspace/.agents/skills/compile/*
 workspace/.agents/skills/support/*
@@ -50,6 +51,9 @@ workspace/.agents/skills/understanding/*
 !workspace/.agents/skills/compile/SKILL.md
 !workspace/.agents/skills/support/SKILL.md
 !workspace/.agents/skills/understanding/SKILL.md
+!workspace/.agents/skills/build-customer-release/**
+workspace/.agents/skills/build-customer-release/**/__pycache__/
+workspace/.agents/skills/build-customer-release/**/*.pyc
 !workspace/.agents/skills/understanding/references/
 !workspace/.agents/skills/understanding/references/*.md
 
@@ -132,6 +136,7 @@ support_level/compile_targets/zephyr/*
 !support_level/compile_targets/flashbin/README.md
 !support_level/compile_targets/flashbin/RELATION.yaml
 !support_level/compile_targets/flashbin/DEPENDENCIES.yaml
+!support_level/compile_targets/flashbin/COMPILE_POLICY.yaml
 !support_level/compile_targets/linux/README.md
 !support_level/compile_targets/linux/RELATION.yaml
 !support_level/compile_targets/m_freertos_sdk/README.md
@@ -222,11 +227,13 @@ support_level/work/*
 !support_level/tools/compile-tool/
 !support_level/tools/imx-rm/
 !support_level/tools/serial-console/
+!support_level/tools/task-tool/
 !support_level/tools/uuu/
 support_level/tools/bcu/*
 support_level/tools/compile-tool/*
 support_level/tools/imx-rm/*
 support_level/tools/serial-console/*
+support_level/tools/task-tool/*
 support_level/tools/uuu/*
 !support_level/tools/bcu/USAGE.md
 !support_level/tools/bcu/RELATION.yaml
@@ -241,6 +248,7 @@ support_level/tools/compile-tool/compile_tool/*
 !support_level/tools/compile-tool/tests/
 support_level/tools/compile-tool/tests/*
 !support_level/tools/compile-tool/tests/test_compile_tool.py
+!support_level/tools/compile-tool/tests/test_generic_state.py
 !support_level/tools/compile-tool/tests/test_state_workflow.py
 !support_level/tools/imx-rm/README.md
 !support_level/tools/imx-rm/USAGE.md
@@ -254,5 +262,16 @@ support_level/tools/compile-tool/tests/*
 !support_level/tools/serial-console/tests/
 support_level/tools/serial-console/tests/*
 !support_level/tools/serial-console/tests/test_serial_console.py
+!support_level/tools/task-tool/task-tool
+!support_level/tools/task-tool/USAGE.md
+!support_level/tools/task-tool/TASK_STATE_SCHEMA.md
+!support_level/tools/task-tool/UPDATE_SCHEMA.md
+!support_level/tools/task-tool/RELATION.yaml
+!support_level/tools/task-tool/task_tool/
+support_level/tools/task-tool/task_tool/*
+!support_level/tools/task-tool/task_tool/*.py
+!support_level/tools/task-tool/tests/
+support_level/tools/task-tool/tests/*
+!support_level/tools/task-tool/tests/test_task_tool.py
 !support_level/tools/uuu/USAGE.md
 !support_level/tools/uuu/RELATION.yaml

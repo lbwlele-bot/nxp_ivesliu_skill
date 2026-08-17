@@ -1,0 +1,29 @@
+schema_version: 1
+audience: customer_integration
+required_files:
+  - README_CN.md
+  - RELEASE.yaml
+  - SHA256SUMS
+allowed_top_level:
+  - README_CN.md
+  - RELEASE.yaml
+  - SHA256SUMS
+  - patches
+  - binaries
+  - reference
+  - licenses
+readme:
+  path: README_CN.md
+  required_phrases:
+    - 整体设计
+    - 为什么
+    - 各组件修改
+    - 移植
+    - 已验证范围
+    - 限制
+patches:
+  - path: patches/REPLACE_WITH_PATCH.patch
+    baseline: /REPLACE/WITH/CASE_LOCAL/CLEAN/BASELINE
+    method: git
+    strip: 1
+scripts: []

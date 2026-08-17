@@ -4,7 +4,7 @@ type: board_profile
 human_doc: README.md
 owner: board-exec
 
-summary: i.MX8DXL EVK 板级事实入口，包含串口映射、手动复位规则、M 核 loader 偏好、变体适用边界和 SDPS/FB 阶段证据。
+summary: i.MX8DXL EVK 板级事实入口，包含串口映射、下载接口、手动复位规则、M 核 loader 偏好、变体适用边界和 SDPS/FB 阶段证据。
 
 relations:
   projects: []
@@ -24,6 +24,7 @@ case_required_for:
   - board_reset_or_boot_mode_change
 
 warnings:
+  - The validated Serial Downloader connector on the current B0 LPDDR4 EVK specimen is J15/USB_OTG2; re-check the schematic and fresh probe for another board or revision.
   - DXL reset policy depends on required evidence because BCU channel 1 and the M4 console share FT4232H if01.
   - If M4 early log is required, complete BCU boot-mode work first, recover if01, arm all captures, and request physical RESET.
   - If M4 log is explicitly excluded, the current B0 LPDDR4 specimen supports BCU reset while capturing only a-core/if02 and scfw/if03.

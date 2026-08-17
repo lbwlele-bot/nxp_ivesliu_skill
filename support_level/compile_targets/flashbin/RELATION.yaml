@@ -36,9 +36,11 @@ warnings:
   - RTE name alone must not decide flash_a55 or flash_all.
   - Listed relations are candidate inputs; the actual set must be selected from SoC, board, DDR, software stack, recipe, payload set, and validation goal.
   - Every candidate component must be declared in the case manifest before compile-tool assess.
-  - DEPENDENCIES.yaml expresses invalidation edges only; it does not select a recipe.
+  - DEPENDENCIES.yaml limits declared decision scope to explicit downstream components; it does not decide whether to rebuild or select a recipe.
+  - COMPILE_POLICY.yaml owns flashbin parameter, command, and execution guards, including the SMFW refresh sequence and isolated imx-mkimage workspace.
 
 evidence:
   - README.md
   - DEPENDENCIES.yaml
+  - COMPILE_POLICY.yaml
   - ../../software_stacks/rte.md

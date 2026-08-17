@@ -78,7 +78,7 @@ description: 编译阶段高层路由层（在本机 Ubuntu 上做）。当任�
 ## 统一编译执行入口
 
 源码阅读、依赖分析、编译对象判断和命令规划不需要调用工具。
-只有准备进入真实编译或 flashbin 软件状态评估时，才进入：
+只有准备进入真实编译或软件状态评估时，才进入：
 
 - `../support_level/tools/compile-tool/USAGE.md`
 - `../support_level/tools/compile-tool/compile-tool`
@@ -96,36 +96,69 @@ manifest 必须按 `compile-tool/SOFTWARE_STATE_SCHEMA.md`
 
 流程固定为：
 
-1. 执行 `compile-tool assess <manifest>`
-2. 如果是 `ACQUIRE_REQUIRED`，完整展示源码准备命令，
+1. 执行 `compile-tool requirements <manifest>`，确认当前 component
+   触发的受约束参数清单
+2. 执行 `compile-tool assess <manifest>`
+3. 如果是 `ACQUIRE_REQUIRED`，完整展示源码准备命令，
    再以同一 hash 执行 `compile-tool acquire`
-3. 重新 `assess`；`REUSE_ONLY` 直接复用，不制造编译命令
-4. `READY` 时按工具给出的精确 component/action 顺序生成 schema v2 请求
-5. 请求按 `compile-tool/REQUEST_SCHEMA.md` 显式写出：
-   SoC、silicon revision、芯片封装、板型、DDR、软件版本，
-   以及它们对本次编译的影响
-6. 执行 `compile-tool prepare <request>`
-7. 在 commentary 中向用户完整展示 `prepare` 输出的身份、
-   assessment、最小动作集合、工作目录、环境变量、原始命令和 plan hash
-8. 无需逐次等待用户确认，使用同一个 hash 执行
-   `compile-tool run <request> --plan-hash <hash>`
+4. 重新 `assess`，读取 `MATCHED / CHANGES_OBSERVED` 状态摘要
+5. 由 LLM 根据任务目标和工程判断决定是否重编，并在 schema v2 request
+   的 `decision.scope/reason` 中声明直接变更组件和理由
+6. 请求按 `compile-tool/REQUEST_SCHEMA.md` 绑定 manifest 和 assessment；
+   unit 只能位于 scope 或其显式下游
+7. 执行 `compile-tool prepare <request>`
+8. 在 commentary 中向用户完整展示 `prepare` 输出的受约束参数、
+   assessment、LLM 决策范围、工作目录、环境变量和原始命令
+9. 无需逐次等待用户确认，执行 `compile-tool run <request>`
 
 `state/software-state.yaml` 只能由工具生成。
-不要手工填写 hash、把失败产物标成成功，或绕过 assessment 增加全量编译步骤。
+不要手工填写 hash、把失败产物标成成功，或绕过 decision scope
+增加无关平级组件。
 
-只要源码、配置、工具链、产物、依赖图、身份、工作目录、环境变量
-或原始命令发生变化，旧 hash 就失效；
-必须重新 `prepare`、重新向用户展示，再执行。
+managed Git 的 case source 只承载源码身份。普通 out-of-tree 构建的 cwd
+必须位于源码树外；命中 `isolated_git` policy 的 in-tree component 必须使用
+compile-tool 显示的 `build/.compile-tool/<target>/<component>/source/`。
+不要通过 `.gitignore` 或 manifest 生成路径白名单隐藏构建生成物。
+
+只要源码、配置、工具链、产物、依赖图或受约束参数发生变化，
+旧 assessment hash 就失效；必须重新 assessment 和 prepare。
+
+不要全局要求 SoC、silicon revision、封装、板型、DDR 和软件版本。
+参数是否允许 assumption/default，或者必须询问用户，
+以 compile target、源码项目或 workspace 旁边的 `COMPILE_POLICY.yaml`
+为机器权威。
+
+当前 OEI 和 imx-mkimage/flashbin 的 `silicon_revision`
+是 `must_ask_user`：不知道就停下来问用户；
+manifest 中必须记录 `source: user`，对应 make 命令必须显式包含同值
+`REV=<value>`，不能依赖项目默认值。
+
+SMFW rebuild 还必须声明 `smfw_config`，并按 policy 执行：
+删除 `configs/<smfw_config>/` 生成目录、`make really-clean`、
+`make config=<smfw_config> cfg`、`make config=<smfw_config> all`。
+不能删除 `.cfg` 源文件或整个 `configs/`。
 
 ### 其他 compile target
 
-Linux、M FreeRTOS、Zephyr 和 A55 RTOS 首版仍使用 schema v1：
+Linux、M FreeRTOS、Zephyr、A55 RTOS 和后续普通 target
+使用通用 schema v2 状态单元，在当前 case 准备：
 
-1. 生成 `records/compile-request.yaml`
-2. `prepare` 并完整展示身份和原始命令
-3. 使用同一 plan hash 执行 `run`
+- `records/compile/<target>/manifest.yaml`
+- `records/compile/<target>/request.yaml`
 
-工具会明确提示这些 target 尚未启用最小重编约束。
+调用流程仍是 `assess -> 必要时 acquire -> prepare -> run`。
+manifest 只列本次实际需要的 component、明确来源、配置、工具、
+watched inputs、产物和已知依赖。工具只传播 manifest 明确写出的
+`depends_on`，不解析 Makefile、Kbuild 或 west manifest，也不补猜未知依赖。
+
+通用状态单元只能使用 `rebuild`；文件级增量和 `west build` 是否使用
+`-p always` 仍由项目手册和工程判断决定。普通组件使用 clean、mrproper、
+really-clean 或递归强制删除时，必须在 request 中显式说明 destructive 理由。
+新增普通 target 默认只增加 manifest，不为它新增 Python profile。
+
+schema v1 只保留给尚未纳入软件状态维护的临时命令；
+它只做请求形状和原始命令校验，不更新 `software-state.yaml`，
+也不应用 component 参数规则。
 
 在本工作区的规范流程中，
 不直接执行裸 `make`、`cmake`、`ninja`、`bitbake`

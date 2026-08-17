@@ -1,0 +1,41 @@
+schema_version: 1
+target: flashbin
+
+rules:
+  flashbin-oei-silicon-revision:
+    component: oei
+    parameter: silicon_revision
+    resolution: must_ask_user
+    command:
+      executables: [make]
+      assignments: [REV, R, r]
+    reason: OEI may compile with its default revision but fail on the target silicon.
+
+  flashbin-mkimage-silicon-revision:
+    component: flashbin
+    parameter: silicon_revision
+    resolution: must_ask_user
+    command:
+      executables: [make]
+      assignments: [REV]
+    reason: imx-mkimage revision selects revision-specific packaging inputs and behavior.
+
+command_rules:
+  flashbin-smfw-config-refresh:
+    component: smfw
+    kind: smfw_config_refresh
+    parameter: smfw_config
+    reason: make cfg can leave stale generated code unless configs/<config> is removed first.
+
+execution_rules:
+  flashbin-atf-isolated-source:
+    component: atf
+    mode: isolated_git
+    source_kind: managed_git
+    reason: ATF writes its build directory below the source tree; package builds must keep the managed source fingerprint immutable.
+
+  flashbin-mkimage-isolated-source:
+    component: flashbin
+    mode: isolated_git
+    source_kind: managed_git
+    reason: imx-mkimage stages inputs and generates tools and containers in-tree; the managed source fingerprint must remain immutable during packaging.

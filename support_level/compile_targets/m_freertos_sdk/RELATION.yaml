@@ -16,7 +16,8 @@ relations:
   release_packages:
     - m_freertos_sdk_package
   boards: []
-  tools: []
+  tools:
+    - compile-tool
 
 case_required_for:
   - extracted_sdk
@@ -26,6 +27,7 @@ case_required_for:
 warnings:
   - The default build entry is the board/version matched release package, not mcuxsdk-core.
   - Missing SDK versions must be provided by the user or confirmed as local assets; do not substitute nearby versions.
+  - SDK_2_9_0_EVK-MIMX8DXL requires GCC 9.2.1 and compile-tool blocks a conflicting compiler identity.
   - A built M core payload is not the same as a complete flash.bin.
 
 evidence:

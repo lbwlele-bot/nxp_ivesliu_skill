@@ -1,0 +1,63 @@
+schema_version: 2
+board: imx943evk19b1
+profile_status: partial
+adapter:
+  name: FT4232H Quad HS USB-UART/FIFO IC
+  usb_id: "0403:6011"
+  interface_count: 4
+baudrate: 115200
+format: 8N1
+prefer_by_id: true
+ports:
+  first-com:
+    order: 1
+    interface: if00
+    tty: /dev/ttyUSB0
+    description: First COM; user identifies it as the application M33 console, pending captured runtime data
+    default_capture: false
+    required: false
+    status: partial
+  second-com:
+    order: 2
+    interface: if01
+    tty: /dev/ttyUSB1
+    description: Second COM; BCU control channel with no assigned application runtime role
+    default_capture: false
+    required: false
+    status: verified
+  a-core:
+    order: 3
+    interface: if02
+    tty: /dev/ttyUSB2
+    description: Verified SPL, BL31, U-Boot and RTE Linux console
+    log_sources:
+      - spl
+      - bl31
+      - u-boot
+      - linux
+    default_capture: true
+    required: true
+    status: verified
+  sm:
+    order: 4
+    interface: if03
+    tty: /dev/ttyUSB3
+    description: Verified DDR OEI, SMFW and monitor console
+    log_sources:
+      - oei
+      - smfw
+      - monitor
+    default_capture: true
+    required: true
+    status: verified
+evidence:
+  verified_at: "2026-08-07"
+  case: ../../../../work/2026-08-06-imx943-dual-m7-udp-rpmsg-latency
+  session: logs/rte34-sd-forced-boot-serial-session.yaml
+notes:
+  - FTDI EEPROM 0C1819 identifies EVK Board Rev B1 and SoC Rev A0.
+  - All four physical interfaces opened successfully during the capture-backed BCU reset.
+  - BCU hardware access uses if01 and can leave it detached from ftdi_sio; run serial-console recover after BCU exits.
+  - A capture-backed temporary SD boot verified a-core on if02 and DDR OEI/SMFW on if03.
+  - The overall profile remains partial because application M33 on if00 still lacks captured runtime evidence.
+  - External M7 CH340 adapters are case-local and are not part of this onboard four-interface profile.

@@ -29,8 +29,12 @@
 机器可执行的候选组件和依赖方向由同目录 `DEPENDENCIES.yaml` 维护。
 进入真实 flashbin 编译前，必须在当前 case 准备
 `records/compile-manifest.yaml`，并通过 `compile-tool assess` 得到
-`REUSE / REBUILD / REPACK` 结果。
+`MATCHED / CHANGES_OBSERVED` 状态观察。
 未使用的候选组件也必须显式写成 `not_applicable + reason`。
+
+是否重编由 LLM 结合任务目标和状态观察决定，并在 compile request 的
+`decision.scope/reason` 中显式声明。工具只允许 scope 组件和
+`DEPENDENCIES.yaml` 中的下游组件，防止无关平级输入被顺带重编。
 
 `DEPENDENCIES.yaml` 只表达“哪些候选输入会进入最终 flashbin”；
 不推断 SoC recipe，也不替代当前软件栈和项目 `USAGE.md`。
@@ -48,7 +52,8 @@
 
 - 需要更新 SMFW：
   进入 `../../code_assets/projects/imx-sm/USAGE.md`，
-  重建后回到 `imx-mkimage` 打完整 `flash.bin`
+  按生成目录清理、really-clean、cfg、all 的受控顺序重建，
+  再回到 `imx-mkimage` 打完整 `flash.bin`
 - 需要更新 ATF：
   进入 `../../code_assets/projects/imx-atf/USAGE.md`，
   重建后回到 `imx-mkimage`
@@ -94,6 +99,34 @@ recipe 选择原则：
 ### `i.MX95 RTE 3.3`
 
 这条链路的关键点是构建身份和输入集合，不能只看一个 `make` 命令。
+
+## silicon revision 参数门禁
+
+OEI 和 imx-mkimage 会消费 silicon revision，且上游默认值可能让编译成功但
+生成不适合目标芯片的产物。因此这两个 component 不允许猜测 revision：
+
+- 不知道时必须询问用户
+- manifest 记录 `silicon_revision.value` 和 `source: user`
+- OEI 与 mkimage 的实际 make 命令显式传递同值 `REV=<value>`
+
+该约束由本目录 `COMPILE_POLICY.yaml` 声明，并由 `compile-tool` 执行。
+ATF、U-Boot、Linux 等没有命中该规则的对象不因此被要求填写 revision。
+
+## imx-mkimage 执行隔离
+
+imx-mkimage 会在工程目录暂存上游二进制，并生成 `mkimage_imx8`、
+`src/build_info.h`、container 和 `flash.bin`。这些内容属于构建现场，不是
+源码修改。
+
+本 target 的 policy 因此要求 managed Git `flashbin` component 使用
+`isolated_git`。打包步骤统一在
+`build/.compile-tool/flashbin/flashbin/source/` 中执行；
+`sources/imx-mkimage/` 只保留 commit、patch 和新增源码身份。不要再通过
+case-local `.gitignore` 或生成路径白名单规避源码指纹检查。
+
+同一 policy 也要求 managed Git `atf` component 在
+`build/.compile-tool/flashbin/atf/source/` 中构建，避免其源码内 `build/`
+目录依赖上游 `.gitignore` 才能维持稳定指纹。
 
 已验证过的打包形态是：
 

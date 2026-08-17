@@ -4,7 +4,7 @@
 
 | 顺序 | Interface | 默认 role | 已验证输出 |
 |---|---|---|---|
-| 第 1 个 COM | `if00` | `first-com` | 未分配默认运行日志 |
+| 第 1 个 COM | `if00` | `first-com` | 用户预期为 application M33，待受控输出验证 |
 | 第 2 个 COM | `if01` | `second-com` | BCU 板控，无默认运行日志 |
 | 第 3 个 COM | `if02` | `a-core` | SPL、BL31、U-Boot、Linux |
 | 第 4 个 COM | `if03` | `sm` | SMFW、SM Debug Monitor |
@@ -17,8 +17,18 @@ interface 解析，不硬编码完整 by-id basename。
 
 ## Profile 边界
 
-当前没有连接外部 application M-core UART 转接板。那些 UART 不属于主板
-四口 profile，也不应根据主板四个 COM 的内容推测其 role。
+外部 application M-core UART 不属于主板 FT4232H 四口 profile，也不应
+根据主板四个 COM 的内容推测其 role。
+
+2026-08-07 当前 case 已连接两个外部 CH340 USB-to-TTL，但两者身份字符串
+冲突，不能依赖 `by-id` 或裸 `ttyUSBx` 区分。该主机现场固定使用：
+
+- `TTL-A`: `...usb-0:1.3.3:1.0-port0`
+- `TTL-B`: `...usb-0:1.3.4:1.0-port0`
+
+CM70/CM71 的两者归属必须等受控固件输出后再固定。详细本机绝对路径和
+当前 tty 快照保存在来源 case：
+`../../../../work/2026-08-06-imx943-dual-m7-udp-rpmsg-latency/records/SERIAL_TOPOLOGY.md`。
 
 板 revision 必须由 BCU EEPROM 等现场证据确认；PCB 颜色不能替代 A0/B1
 识别。本 profile 只适用于 `imx943evk19a0`。
@@ -42,3 +52,5 @@ reset 路径另有现场故障，串口工具不据此选择 reset 方法。
 - 来源 case：`2026-07-24-imx943evk19a0-serial-console-validation`
 - `a-core`：73658 bytes，Linux 6.12.34-rt11 到 login
 - `sm`：103 bytes，包含 `Hello from SM` 和 `SM Debug Monitor`
+- 2026-08-07 当前连线复核：FT4232H `BE38C4` 四路完整，另有两路 CH340；
+  来源 case `2026-08-06-imx943-dual-m7-udp-rpmsg-latency`

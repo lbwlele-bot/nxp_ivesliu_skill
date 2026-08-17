@@ -1,0 +1,4 @@
+interface:
+  display_name: "构建客户 Release 包"
+  short_description: "生成精简、可审计、经过补丁与脚本语义验证的客户交付包"
+  default_prompt: "Use $build-customer-release to generate a concise, validated customer integration release package from the current case."

@@ -1,3 +1,3 @@
-"""Compile command and flashbin state enforcement."""
+"""Compile command and software state enforcement."""
 
-__version__ = "2.0"
+__version__ = "3.4"
