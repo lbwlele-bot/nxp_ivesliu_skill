@@ -31,16 +31,26 @@ This B1 board requires SW7-1 `OFF` for BCU operation. The following combination
 was verified on 2026-08-07:
 
 ```bash
-sudo -n bcu get_boot_mode -board=imx943evk19b1
-sudo -n bcu reset -board=imx943evk19b1
+sudo -n bcu eeprom -r -auto
+sudo -n bcu get_boot_mode -auto
+sudo -n bcu reset -auto
 ```
 
-BCU uses `if01` and can detach it from `ftdi_sio`. Restore it afterward with:
+The EEPROM auto path was rechecked on 2026-08-21. It returned board token
+`imx943evk19b1`, Board Rev B1, SoC Rev A0 and PMIC MFS5600. Do not derive the
+board token from the SoC revision or replace `-auto` with an LLM-selected
+`-board=` value.
+
+EEPROM reads and other BCU access use `if01` and can detach it from `ftdi_sio`.
+Complete identity detection before capture, then restore it with:
 
 ```bash
 sudo -n ./serial-console recover --board imx943evk19b1
 ./serial-console probe --board imx943evk19b1
 ```
+
+For reset-start logs, start `capture-set` after this recovery and wait for
+`ALL PORTS READY` before issuing the BCU reset.
 
 ## External M7 UARTs
 

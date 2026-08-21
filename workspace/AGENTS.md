@@ -248,6 +248,10 @@ LLM 必须在 request 中声明 `decision.scope/reason`；工具只允许执行�
 - 状态实例只落在当前 case 下，不落在全局规则层，也不落在 skill 自己目录里。
 - `compile-tool` 生成 `software-state`；`compile` 是 `handoff` 的 owner；`board-exec` 是 `ledger` 的 owner；`support` 只负责 case 容器与路径定位，不代写状态判断。
 - `board-exec` 在任何会改变板状态的动作前后，都必须重新探测；旧日志、旧串口观察和单次命令成功，都不能直接覆盖当前事实。
+- 单块 BCU FTDI 连接时，板型、板 revision 和 SoC revision 优先从
+  `bcu eeprom -r -auto` 读取，不让 LLM 手工填 `-board=`；多板时先让用户按 FTDI serial 选择。
+- 需要 reset 起始串口日志时，必须先恢复串口并启动
+  `serial-console capture-set`，等待所有目标 reader READY 后才允许 reset。
 - 默认用中文交流。
 
 ## 远端仓库

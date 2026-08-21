@@ -33,10 +33,15 @@ case_required_for:
 warnings:
   - Every bcu invocation, including read-only queries, must use sudo -n.
   - If sudo -n fails, stop and report the permission failure; never retry unprivileged.
+  - With exactly one connected FTDI board, try eeprom -r -auto and use -auto later only when complete board and SoC identity is returned; EEPROM-less boards require an already confirmed explicit profile.
+  - Zero or multiple FTDI boards block the default auto-selection path; multiple boards require explicit user selection by physical FTDI serial.
+  - Never respond to Invalid EEPROM context by writing defaults automatically; eeprom -w is a separate destructive configuration action.
+  - EEPROM and other board accesses can detach if01; recover and probe serial interfaces before starting capture.
+  - When reset-start logs matter, BCU reset must run only after serial-console reports all selected readers READY.
   - bcu can change board state; fresh probe is required before and after state-changing actions.
   - bcu is not a runtime verification tool.
   - Board-specific bcu defaults and recovery paths belong in board_knowledge/<board>/README.md.
-  - Options such as -board, -auto, -id, and -keep can change what the command actually affects.
+  - Options such as -auto, -id, and -keep can change what the command actually affects.
 
 evidence:
   - USAGE.md

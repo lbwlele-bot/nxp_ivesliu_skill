@@ -35,6 +35,12 @@ description: 板级执行阶段高层路由层（在本机 Ubuntu 上做）。�
 - 当前是否上电
 - 当前最强的状态信号是什么
 
+板型身份不默认交给 LLM 或用户手工填写。当 BCU 可用且
+`lsftdi` 只发现一块板控设备时，先用 `bcu eeprom -r -auto`
+读取 board id、board revision、SoC revision 和 PMIC，并将原始输出作为
+板型证据。只有多板连接、EEPROM 不完整，或 DDR 等必要字段
+无法由工具证明时，才向用户补问。
+
 这里的重点是：
 
 - 不把命令当计划
@@ -167,6 +173,22 @@ sudo -n ../support_level/tools/uuu/1.5.243/uuu ...
 到普通用户命令。`sudo -n` 失败时，当前结论是主机权限前提不成立，应保存错误
 并停止该工具动作。
 
+BCU 板型选择的默认节奏是：
+
+1. `sudo -n bcu lsftdi`。只有数量为 1 时才允许默认自动选择。
+2. `sudo -n bcu eeprom -r -auto`，完整展示 EEPROM 身份。
+3. EEPROM 返回完整 board/SoC 身份时，后续 BCU 命令使用 `-auto`，
+   不使用 LLM 手工填写的 `-board=`。
+4. 多板连接时停止自动选择，先向用户确认目标 FTDI serial。
+5. EEPROM 缺失或不完整时，只能回退到已由用户确认的显式
+   board profile，不许 LLM 猜。
+6. EEPROM 等板控访问后，串口捕获前必须执行
+   `serial-console recover -> probe`。
+
+需要保留 reset 起始日志时，顺序必须是：完成 EEPROM 识别，
+恢复串口，启动 `capture-set`，等待所有目标 reader 进入 READY，
+最后才执行 reset。不允许 reset 后再开始监听。
+
 ### 1. `CPU0` / 板控阶段规则
 
 至少先分清当前更像下面哪一类：
@@ -242,7 +264,7 @@ reset 是板型和实物相关能力，不能因为某一块板验证成功或�
 
 拿到并连接一块具体实物板后：
 
-1. 先识别准确 board profile
+1. 优先用 BCU EEPROM 识别准确 board profile；无法工具化识别时再补问
 2. 读取该板 `board_knowledge/<board>/README.md` 和 `RELATION.yaml`
 3. 向用户确认这块实物板是否允许 BCU / 自动 reset
 4. 用户确认前，不主动执行自动 reset

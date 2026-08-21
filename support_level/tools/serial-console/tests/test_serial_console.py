@@ -302,9 +302,20 @@ class SerialConsoleTests(unittest.TestCase):
                 ready_path = root / "ready.txt"
                 ready_path.write_text("stale marker\n")
                 ready_observed = threading.Event()
+                ready_before_first_read = threading.Event()
 
                 class ReadyAwareFakeSerial(FakeSerial):
+                    def __init__(self, chunks: list[bytes], port: str) -> None:
+                        super().__init__(chunks, port=port)
+                        self.first_read = True
+
                     def read(self, size: int) -> bytes:
+                        if self.first_read:
+                            self.first_read = False
+                            if ready_path.is_file():
+                                ready_before_first_read.set()
+                            time.sleep(0.005)
+                            return super().read(size)
                         deadline = time.monotonic() + 0.1
                         while time.monotonic() < deadline:
                             if (
@@ -329,7 +340,7 @@ class SerialConsoleTests(unittest.TestCase):
                     baud=None,
                     log_dir=str(root / "logs"),
                     name="unknown-board",
-                    timeout=0.01,
+                    timeout=0.05,
                     read_timeout=0.001,
                     chunk_size=512,
                     reconnect_interval=0.001,
@@ -346,6 +357,7 @@ class SerialConsoleTests(unittest.TestCase):
 
                 self.assertEqual(status, 0)
                 self.assertIn("ALL PORTS READY", output.getvalue())
+                self.assertFalse(ready_before_first_read.is_set())
                 self.assertTrue(ready_observed.is_set())
                 self.assertFalse(ready_path.exists())
                 self.assertTrue(

@@ -114,9 +114,13 @@ boot mode 和运行阶段判断仍分别属于板级知识和 `board-exec`。
 2. 校验必要 role
 3. 可选执行 `prepare`
 4. 打开所有选定串口
-5. 启动各路 reader
-6. 输出 `ALL PORTS READY: ...; capture is active`
+5. 启动各路 reader，并等待每路至少完成一次成功的底层 `read()`
+6. 全部 reader 进入读取阶段后，输出
+   `ALL PORTS READY: ...; capture is active`
 7. 由 `board-exec` 按板型规则安排 reset 或其它动作
+
+需要 reset 起始日志时，READY 是 reset 的前置条件。不允许先发
+BCU reset，再启动 `capture-set`；丢失在串口打开前已输出的字节无法补回。
 
 对 `imx8dxlevk`，默认抓取：
 
@@ -147,8 +151,8 @@ logs/sd-boot-serial-session.yaml
 READY 文件是活动状态标记，不是历史结果：
 
 - 新会话启动时先删除同路径的旧 READY，避免把上一次会话误判为本次就绪
-- 所有选定端口成功打开、reader 启动后，写入 `state: active`、进程 PID、
-  会话名、开始时间和 roles
+- 所有选定端口成功打开，且每路 reader 至少完成一次成功的
+  底层 `read()` 后，写入 `state: active`、进程 PID、会话名、开始时间和 roles
 - 捕获正常结束或被中断退出时删除 READY
 - 最终结果以 `*-serial-session.yaml` 为准
 
@@ -312,6 +316,8 @@ port3
 - `serial.yaml` 只记录已验证映射；未确认接口保持未命名
 - `partial` profile 只使用已确认 role，不能补猜剩余接口
 - reset 方式不由串口工具决定
+- 任何需要保留 reset 起始日志的流程，都必须先完成本次
+  `capture-set` 的 READY 屏障，再由 `board-exec` 触发 reset
 - i.MX8DXL 需要 M4 早期日志时，BCU 退出后先恢复 `if01`，三路 READY 后
   由用户手动按 RESET
 - i.MX8DXL 不需要 M4 日志时，可显式只捕获 `a-core` 和 `scfw`，两路

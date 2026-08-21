@@ -614,6 +614,7 @@ def capture_role_loop(
     expect_data: bool,
     initial_serial: serial.Serial | None = None,
     start_event: threading.Event | None = None,
+    reader_ready_event: threading.Event | None = None,
     stop_event: threading.Event | None = None,
 ) -> dict[str, Any]:
     started = time.strftime("%Y-%m-%dT%H:%M:%S%z")
@@ -675,6 +676,8 @@ def capture_role_loop(
 
         try:
             data = ser.read(chunk_size)
+            if reader_ready_event is not None:
+                reader_ready_event.set()
             if data:
                 if not result["first_byte_at"]:
                     result["first_byte_at"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
@@ -1059,6 +1062,7 @@ def cmd_capture_set(args: argparse.Namespace) -> int:
 
     start_event = threading.Event()
     stop_event = threading.Event()
+    reader_ready_events = {role: threading.Event() for role in roles}
     stop_reason = {"value": ""}
 
     def request_stop(signum: int, _frame: Any) -> None:
@@ -1086,6 +1090,7 @@ def cmd_capture_set(args: argparse.Namespace) -> int:
             expect_data=role in expect_data,
             initial_serial=opened[role],
             start_event=start_event,
+            reader_ready_event=reader_ready_events[role],
             stop_event=stop_event,
         )
 
@@ -1096,6 +1101,23 @@ def cmd_capture_set(args: argparse.Namespace) -> int:
 
     try:
         start_event.set()
+        ready_deadline = time.monotonic() + 5.0
+        not_ready: list[str] = []
+        for role in roles:
+            remaining = max(0.0, ready_deadline - time.monotonic())
+            if not reader_ready_events[role].wait(remaining):
+                not_ready.append(role)
+        if not_ready:
+            stop_reason["value"] = "reader-start-timeout"
+            stop_event.set()
+            for thread in threads:
+                thread.join()
+            print(
+                "capture-set error: readers did not enter the read loop: "
+                + ", ".join(not_ready),
+                file=sys.stderr,
+            )
+            return 1
         if ready_path:
             ready_path.parent.mkdir(parents=True, exist_ok=True)
             ready_path.write_text(

@@ -26,6 +26,8 @@ case_required_for:
 
 warnings:
   - Serial output or silence alone does not prove board state.
+  - When reset-start logs matter, start capture-set first and do not trigger reset until every selected reader is READY.
+  - READY means every selected port is open and every reader has completed at least one successful low-level read call.
   - Unknown adapters are captured as ordered ports; the tool must not guess firmware or core roles.
   - Reset policy is board-specific and is not selected or executed by this tool.
   - send, uboot-stop, and interactive sessions can affect boot or runtime state; board-exec fresh probe is still required before and after state-changing use.
