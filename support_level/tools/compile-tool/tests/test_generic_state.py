@@ -632,7 +632,7 @@ class GenericAcquisitionTests(unittest.TestCase):
             self.assertTrue((fixture.inputs / "zephyr" / ".git").exists())
 
     def _archive_fixture(self, root: Path, *, unsafe: bool = False) -> GenericFixture:
-        fixture = GenericFixture(root, target="m_freertos_sdk")
+        fixture = GenericFixture(root, target="sdk_fixture")
         archive = root / "SDK_fixture.tar.gz"
         with tarfile.open(archive, "w:gz") as handle:
             data = b"fixture source\n"

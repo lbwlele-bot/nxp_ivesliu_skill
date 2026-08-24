@@ -16,7 +16,8 @@ relations:
     - rte
   release_packages: []
   boards: []
-  tools: []
+  tools:
+    - compile-tool
 
 case_required_for:
   - patched_atf
@@ -27,6 +28,7 @@ warnings:
   - RTE or OP-TEE paths may require SPD=opteed, but that decision belongs to the software stack and current case.
   - RTE ATF patch buckets must be applied only to ATF, not copied wholesale from meta-real-time-edge.
   - A standalone bl31.bin build does not mean flash.bin is complete.
+  - Real builds must use the project COMPILE_CHECKLIST.yaml; build commands are profile-generated.
 
 evidence:
   - USAGE.md

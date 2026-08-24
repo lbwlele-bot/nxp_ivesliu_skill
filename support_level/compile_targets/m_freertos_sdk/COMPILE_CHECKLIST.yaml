@@ -1,0 +1,40 @@
+# AI 复制本模板到当前 case：
+# records/compile/m_freertos_sdk/compile.yaml
+# 只填写 TBD、jobs 和 intent，不填原始命令、backend 或输出路径。
+schema_version: 1
+kind: m_freertos_sdk_compile_checklist
+target: m_freertos_sdk
+
+case_root: TBD
+
+sdk:
+  package: TBD
+  compiler: TBD
+
+jobs:
+  example:
+    mode: source_build
+    soc: TBD
+    board: TBD
+    core: TBD
+    core_role: TBD
+    application: demo_apps/hello_world
+    build_configuration: release
+    # prebuilt_import 时增加 provenance；source_build 时不得填写。
+    # provenance:
+    #   kind: vendor_package
+    #   artifacts:
+    #     bin:
+    #       member: boards/<board>/demo_apps/hello_world/hello_world.bin
+    # 或：
+    # provenance:
+    #   kind: user_supplied
+    #   trust_reason: 用户确认该文件为目标版本的预编译镜像
+    #   artifacts:
+    #     bin:
+    #       path: inputs/mcore/hello_world.bin
+    #       sha256: TBD
+
+intent:
+  scope: [example]
+  reason: TBD

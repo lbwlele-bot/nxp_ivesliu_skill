@@ -189,6 +189,18 @@ LLM 不靠记忆猜参数清单；真实编译前先用
 当前 OEI 和 imx-mkimage/flashbin 的 silicon revision 必须询问用户，
 并在对应 make 命令中显式传递 `REV=<value>`；不能猜测或依赖默认值。
 
+OEI、ATF、U-Boot、OP-TEE、SMFW 和 imx-mkimage 使用项目级
+`COMPILE_CHECKLIST.yaml`。AI 只维护
+`records/compile/<project>/compile.yaml`，然后向 compile-tool 提交同一清单的
+`prepare -> run`。profile、manifest、assessment、request 和 hash 由工具内部管理；
+直接提交这些项目的 manifest/request 执行会被阻断。已知 AHAB/DDR
+固定资产由 flashbin fixed-asset matrix 绑定 role、落位和 SHA-256。
+M SDK 使用 `records/compile/m_freertos_sdk/compile.yaml` 公共清单；AI 只填写
+SDK、jobs 和 intent，不能填写 backend、原始命令、输出路径或内部
+manifest/request。含 M payload 的 mkimage recipe 只能消费该 producer 的
+`nxp.mcore.bin`。旧 flashbin 深度模式继续服务不含 M payload 的兼容链路和
+尚未迁移的 SCFW 链路。
+
 如果这次编译的结果已经明确要交给 `board-exec` 消费，
 则 `compile` 负责在当前 case 下生成或更新交接实例。
 

@@ -1,0 +1,37 @@
+# Real-Time Edge U-Boot 项目清单；只有软件栈明确选中该源码线时才使用。
+schema_version: 1
+kind: project_compile_checklist
+project: real-time-edge-uboot
+
+case_root: TBD
+source:
+  ref: TBD
+
+parameters:
+  defconfig: TBD
+  jobs: 8
+
+inputs:
+  artifacts: []
+  files: []
+
+toolchain:
+  make: /usr/bin/make
+  compiler: toolchain/arm-gnu-toolchain-14.3.rel1-x86_64-aarch64-none-linux-gnu/bin/aarch64-none-linux-gnu-gcc
+
+intent:
+  action: rebuild
+  reason: TBD
+
+build:
+  mode: isolated_git
+
+outputs:
+  uboot_bin:
+    type: nxp.uboot.u-boot-bin
+    collect_from: build/u-boot.bin
+    publish_to: artifacts/real-time-edge-uboot/u-boot.bin
+  uboot_spl:
+    type: nxp.uboot.spl
+    collect_from: build/spl/u-boot-spl.bin
+    publish_to: artifacts/real-time-edge-uboot/u-boot-spl.bin

@@ -1,0 +1,40 @@
+# imx-mkimage 项目编译清单模板。
+# AI 将本文件复制到当前 case 的
+# records/compile/imx-mkimage/compile.yaml，只填写 TBD、输入选择和本轮 intent。
+schema_version: 1
+kind: project_compile_checklist
+project: imx-mkimage
+
+case_root: TBD
+
+source:
+  ref: TBD
+
+parameters:
+  silicon_revision: TBD
+  soc: TBD
+  recipe: TBD
+  lpddr_type: TBD
+  oei_enabled: TBD
+
+inputs:
+  # artifact 条目：{name, slot, checklist, artifact, stage_to}
+  artifacts: []
+  # file 条目：{name, slot, path, stage_to}
+  files: []
+
+toolchain:
+  make: /usr/bin/make
+
+intent:
+  action: repack
+  reason: TBD
+
+build:
+  mode: isolated_git
+
+outputs:
+  flashbin:
+    type: nxp.boot.flashbin
+    collect_from: ${parameters.soc}/flash.bin
+    publish_to: artifacts/imx-mkimage/flash.bin

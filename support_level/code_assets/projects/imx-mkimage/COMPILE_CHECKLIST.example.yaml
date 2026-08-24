@@ -1,0 +1,72 @@
+# 结构填写示例，不是已验证 case；flash_all 的完整输入集仍需按实际软件栈核对。
+schema_version: 1
+kind: project_compile_checklist
+project: imx-mkimage
+
+case_root: /home/ives/桌面/NXP_v2/support_level/work/example-imx95-oei-mkimage
+
+source:
+  ref: lf-6.12.49-2.2.0
+
+parameters:
+  silicon_revision: B0
+  soc: iMX95
+  recipe: flash_all
+  lpddr_type: lpddr5
+  oei_enabled: 'YES'
+
+inputs:
+  artifacts:
+    - name: oei
+      slot: oei
+      checklist: records/compile/imx-oei/compile.yaml
+      artifact: oei_ddr
+      stage_to: iMX95/oei-m33-ddr.bin
+    - name: atf
+      slot: atf
+      checklist: records/compile/imx-atf/compile.yaml
+      artifact: bl31
+      stage_to: iMX95/bl31.bin
+    - name: uboot_bin
+      slot: uboot_bin
+      checklist: records/compile/uboot-imx/compile.yaml
+      artifact: uboot_bin
+      stage_to: iMX95/u-boot.bin
+    - name: uboot_spl
+      slot: uboot_spl
+      checklist: records/compile/uboot-imx/compile.yaml
+      artifact: uboot_spl
+      stage_to: iMX95/u-boot-spl.bin
+    - name: smfw
+      slot: smfw
+      checklist: records/compile/imx-sm/compile.yaml
+      artifact: smfw
+      stage_to: iMX95/m33_image.bin
+    - name: optee
+      slot: optee
+      checklist: records/compile/imx-optee-os/compile.yaml
+      artifact: tee
+      stage_to: iMX95/tee.bin
+  files:
+    - {name: ahab, slot: ahab, path: inputs/imx-mkimage/mx95b0-ahab-container.img, stage_to: iMX95/mx95b0-ahab-container.img}
+    - {name: lpddr_imem, slot: firmware, path: inputs/imx-mkimage/lpddr5_imem_v202409.bin, stage_to: iMX95/lpddr5_imem_v202409.bin}
+    - {name: lpddr_dmem, slot: firmware, path: inputs/imx-mkimage/lpddr5_dmem_v202409.bin, stage_to: iMX95/lpddr5_dmem_v202409.bin}
+    - {name: lpddr_imem_qb, slot: firmware, path: inputs/imx-mkimage/lpddr5_imem_qb_v202409.bin, stage_to: iMX95/lpddr5_imem_qb_v202409.bin}
+    - {name: lpddr_dmem_qb, slot: firmware, path: inputs/imx-mkimage/lpddr5_dmem_qb_v202409.bin, stage_to: iMX95/lpddr5_dmem_qb_v202409.bin}
+    - {name: m7, slot: m_payload, path: inputs/imx-mkimage/m7_image.bin, stage_to: iMX95/m7_image.bin}
+
+toolchain:
+  make: /usr/bin/make
+
+intent:
+  action: repack
+  reason: 使用同 case OEI 和当前固定输入打包 B0 i.MX95 flash.bin
+
+build:
+  mode: isolated_git
+
+outputs:
+  flashbin:
+    type: nxp.boot.flashbin
+    collect_from: ${parameters.soc}/flash.bin
+    publish_to: artifacts/imx-mkimage/flash.bin

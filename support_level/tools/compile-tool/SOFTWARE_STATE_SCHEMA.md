@@ -109,6 +109,55 @@ components:
 - outputs 使用非空普通文件
 - 每个 component 至少声明一个具名工具及只读版本命令
 
+公开清单生成的 component 可以附加来源与导入契约：
+
+```yaml
+components:
+  vendor_m7:
+    operation: import
+    origin:
+      mode: prebuilt_import
+      assurance: catalog_verified
+      details:
+        package: SDK_26_06_00_IMX95LPD5EVK-19
+        package_sha256: sha256:<digest>
+    import_contract:
+      - source: /absolute/case/sources/.../hello_world.bin
+        output: /absolute/case/artifacts/m_freertos_sdk/vendor_m7/vendor_m7.bin
+```
+
+`origin.mode` 为 `source_build` 或 `prebuilt_import`。本地构建只允许
+`locally_built`；预编译为 `catalog_verified` 或 `user_attested`。这些是兼容
+schema v2 的附加字段，已有 target 不需要迁移。`operation: import` 只允许公开
+清单生成，并要求契约覆盖每一个输出。
+
+项目 profile 实例仍使用 generic schema v2，并增加：
+
+```yaml
+project_profile:
+  path: /absolute/project/COMPILE_PROFILE.yaml
+  hash: sha256:<profile-identity>
+
+artifact_inputs:
+  oei_image:
+    slot: oei
+    manifest: /absolute/same-case/records/compile/imx-oei/manifest.yaml
+    artifact: oei_ddr
+
+exports:
+  flashbin:
+    component: imx-mkimage
+    type: nxp.boot.flashbin
+    path: /absolute/case/artifacts/imx-mkimage/flash.bin
+    identity_parameters: [silicon_revision, recipe]
+```
+
+export 也可由工具生成显式 `identity` mapping；它与 `identity_parameters` 互斥。
+M producer 用此方式记录 `soc/board/core/core_role/application/`
+`build_configuration/sdk_release/origin`。
+
+模板、slot 条件、类型和身份匹配见 `PROJECT_PROFILE_SCHEMA.md`。
+
 来源支持：
 
 - `managed_git`：单仓 detached worktree
@@ -162,7 +211,7 @@ work/<case>/state/software-state.yaml
 
 ```yaml
 schema_version: 2
-generated_by: compile-tool 3.4
+generated_by: compile-tool 3.7
 case: <case>
 targets:
   flashbin: {}
@@ -173,6 +222,16 @@ integrity_hash: sha256:<digest>
 每个 target 记录 manifest/profile、component 源码、配置、工具、输入快照、
 输出 SHA-256 和缓存 stat。命令 hash 不记录，也不参与依赖身份。
 有效旧 state v1 会迁移到 `targets.flashbin`。
+
+项目 consumer component 还记录 `artifact_inputs`：生产 target/manifest、
+producer component state identity、artifact type/path/SHA-256 和 identity。
+同时记录 producer origin；这些字段变化会使 consumer 需要重建或重新打包。
+
+OEI、ATF、通用/RTE U-Boot、OP-TEE、SMFW、mkimage 和 M SDK 的单清单
+入口会把 case `compile.yaml` 正规化为内部 manifest。mkimage 的
+fixed 源文件进入 `watched_inputs` 内容指纹，M payload 必须来自 M producer；
+`stage_to` 进入 configuration 指纹。任一源文件内容、暂存位置或 producer 成功
+状态变化，都会使 mkimage 进入 repack。
 
 命中 `isolated_git` 的 component 还记录执行模式、契约版本、policy 来源和
 隔离工作区身份。旧成功记录缺少该契约时会触发一次重建；执行副本中的临时

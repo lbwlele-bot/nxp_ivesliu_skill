@@ -4,6 +4,14 @@
 - 最近观察分支（使用前重新核对）：`master`
 - 最近观察版本（使用前重新核对）：`lf-6.18.2-1.0.0`
 - 主要链路：`SMFW` / `flash.bin` 上游输入
+- 对外编译清单：`COMPILE_CHECKLIST.yaml`
+
+## 受控单清单入口
+
+复制清单到 `records/compile/imx-sm/compile.yaml`，填写 ref、`config` 和 intent。
+AI 不填写删除或 make 命令；compile-tool 根据 profile 生成并校验“只删除对应
+生成目录 -> really-clean -> cfg -> all”，全部动作位于隔离源码副本，最后
+发布 `smfw` artifact。
 
 ## 角色
 

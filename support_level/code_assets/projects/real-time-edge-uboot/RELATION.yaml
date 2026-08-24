@@ -16,7 +16,8 @@ relations:
     - rte
   release_packages: []
   boards: []
-  tools: []
+  tools:
+    - compile-tool
 
 case_required_for:
   - patched_rte_uboot
@@ -27,6 +28,7 @@ warnings:
   - The current local copy may be an old RTE U-Boot line; verify the target RTE branch or tag before use.
   - Do not substitute this directory for missing target-version RTE U-Boot sources.
   - This project explains selected RTE U-Boot work, not the whole RTE software stack.
+  - A checklist does not prove that the old local source line supports an i.MX9 defconfig.
 
 evidence:
   - USAGE.md

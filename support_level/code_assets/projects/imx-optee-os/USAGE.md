@@ -4,6 +4,14 @@
 - 最近观察分支（使用前重新核对）：`lf-6.12.49_2.2.0`
 - 最近观察版本（使用前重新核对）：`lf-6.12.49-2.2.0`
 - 主要链路：`OP-TEE` / `flash.bin` 上游输入
+- 对外编译清单：`COMPILE_CHECKLIST.yaml`
+
+## 受控单清单入口
+
+复制清单到 `records/compile/imx-optee-os/compile.yaml`，填写 ref、
+`PLATFORM_FLAVOR` 和 intent。compile-tool 绑定 32/64 位工具链，在隔离源码中
+构建，并把本轮 `tee-raw.bin` 发布为具名 `tee` artifact；发布动作不会丢失
+原始输出到 `tee.bin` 的来源关系。
 
 ## 角色
 

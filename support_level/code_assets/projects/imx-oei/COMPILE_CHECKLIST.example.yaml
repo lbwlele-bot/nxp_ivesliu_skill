@@ -1,0 +1,35 @@
+# 结构填写示例，不是已验证 case，也不应直接执行。
+schema_version: 1
+kind: project_compile_checklist
+project: imx-oei
+
+case_root: /home/ives/桌面/NXP_v2/support_level/work/example-imx95-oei-mkimage
+
+source:
+  ref: lf-6.18.2-1.0.0
+
+parameters:
+  silicon_revision: B0
+  board: mx95lp5
+  oei_type: ddr
+
+inputs:
+  artifacts: []
+  files: []
+
+toolchain:
+  make: /usr/bin/make
+  compiler: toolchain/arm-gnu-toolchain-14.3.rel1-x86_64-arm-none-eabi/bin/arm-none-eabi-gcc
+
+intent:
+  action: rebuild
+  reason: 为当前 imx-mkimage 试点生成 B0 mx95lp5 DDR OEI
+
+build:
+  mode: isolated_git
+
+outputs:
+  oei_ddr:
+    type: nxp.oei.ddr-image
+    collect_from: build/${parameters.board}/${parameters.oei_type}/oei-m33-ddr.bin
+    publish_to: artifacts/imx-oei/oei-m33-ddr.bin

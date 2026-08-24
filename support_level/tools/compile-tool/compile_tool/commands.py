@@ -127,6 +127,9 @@ def _smfw_source_root(
     component: str,
 ) -> Path | None:
     item = manifest["components"][component]
+    execution = item.get("execution")
+    if isinstance(execution, dict) and execution.get("mode") == "isolated_git":
+        return Path(execution["workspace"]).resolve()
     source = item.get("source")
     if isinstance(source, dict) and source.get("kind") == "managed_git":
         return Path(source["case_path"]).resolve()

@@ -85,6 +85,33 @@ description: 编译阶段高层路由层（在本机 Ubuntu 上做）。当任�
 
 ### flashbin
 
+项目自治模型当前在 OEI、ATF、U-Boot、OP-TEE、SMFW 和 imx-mkimage
+使用单清单入口：
+
+```text
+records/compile/imx-oei/compile.yaml
+records/compile/imx-atf/compile.yaml
+records/compile/uboot-imx/compile.yaml
+records/compile/imx-optee-os/compile.yaml
+records/compile/imx-sm/compile.yaml
+records/compile/imx-mkimage/compile.yaml
+records/compile/m_freertos_sdk/compile.yaml
+```
+
+从项目 `COMPILE_CHECKLIST.yaml` 复制并填写，然后只执行
+`prepare <compile.yaml> -> run <compile.yaml>`。profile、manifest、assessment 和 request
+是工具内部实现，不由 AI 维护。producer 成功后，consumer 清单通过
+同 case `checklist + artifact` 引用其具名产物。工具校验 producer 成功
+状态、hash、type 和身份参数。imx-mkimage 的输入由当前 recipe contract
+选择，不把上游项目的编译规则重新塞回 mkimage。
+
+该模型当前没有自动跨 manifest 编排，必须显式先 producer、后 consumer。
+AHAB/DDR 固定资产已在当前 i.MX94/i.MX95 覆盖组合中绑定
+role、落位和 SHA-256。M payload 已通过 M SDK 公共清单成为独立 producer，
+含 M payload 的 mkimage recipe 只能消费其 `nxp.mcore.bin`；SCFW
+release-package producer 尚未完成迁移，因此旧 flashbin 深度模式继续兼容；
+不能混称为已经完成全量迁移。
+
 flashbin 首先在当前 case 准备：
 
 - `records/compile-manifest.yaml`
@@ -138,9 +165,17 @@ SMFW rebuild 还必须声明 `smfw_config`，并按 policy 执行：
 `make config=<smfw_config> cfg`、`make config=<smfw_config> all`。
 不能删除 `.cfg` 源文件或整个 `configs/`。
 
-### 其他 compile target
+### M SDK 公共清单与其他 compile target
 
-Linux、M FreeRTOS、Zephyr、A55 RTOS 和后续普通 target
+M FreeRTOS 已使用独立公共清单：
+
+- 模板：`../support_level/compile_targets/m_freertos_sdk/COMPILE_CHECKLIST.yaml`
+- case：`records/compile/m_freertos_sdk/compile.yaml`
+- 一张清单可含多个具名 job；每个 job 独立状态
+- AI 只填 package/compiler/job/intent，不填 backend、命令、输出路径或内部请求
+- source build 同源发布 ELF+BIN；prebuilt import 只校验、复制和发布
+
+Linux、Zephyr、A55 RTOS 和后续普通 target
 使用通用 schema v2 状态单元，在当前 case 准备：
 
 - `records/compile/<target>/manifest.yaml`
@@ -151,7 +186,8 @@ manifest 只列本次实际需要的 component、明确来源、配置、工具�
 watched inputs、产物和已知依赖。工具只传播 manifest 明确写出的
 `depends_on`，不解析 Makefile、Kbuild 或 west manifest，也不补猜未知依赖。
 
-通用状态单元只能使用 `rebuild`；文件级增量和 `west build` 是否使用
+普通通用状态单元只能使用 `rebuild`；公开清单生成的受控预编译单元可使用
+`import`。文件级增量和 `west build` 是否使用
 `-p always` 仍由项目手册和工程判断决定。普通组件使用 clean、mrproper、
 really-clean 或递归强制删除时，必须在 request 中显式说明 destructive 理由。
 新增普通 target 默认只增加 manifest，不为它新增 Python profile。

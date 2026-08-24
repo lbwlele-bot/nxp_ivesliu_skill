@@ -7,6 +7,13 @@
 
 flashbin 不接受 schema v1。
 
+OEI、ATF、通用/RTE U-Boot、OP-TEE、SMFW、imx-mkimage 和 M SDK 的
+对外输入是 case `compile.yaml`，不由 AI 直接填写 schema v2
+request。compile-tool 将清单转成本文所述内部 request，并在
+prepare/run 中重新校验。公开 CLI 直接提交任一已启用清单项目的
+manifest/request 会被阻断。跨项目 artifact 仍在内部 assess 阶段
+进入 assessment hash。
+
 ## Schema v2
 
 ```yaml
@@ -45,6 +52,7 @@ compile:
 
 - `component` 必须来自 manifest 中的启用组件
 - 通用状态单元的 `action` 只能是 `rebuild`
+- 公开清单生成的预编译 component 使用 `import`；它不能由 AI 直接请求
 - flashbin build component 使用 `rebuild`，package 使用 `repack`
 - 同一个 component 只能出现一次
 - unit 必须位于 scope 或其显式下游，且按 manifest 拓扑顺序排列
@@ -60,6 +68,11 @@ compile:
   存在；`isolated_git` component 可以指向尚未物化的固定隔离目录
 - `env`：可选标量环境变量
 - `command`：由 `/bin/bash -lc` 原样执行的非空命令
+
+`import` unit 是例外的封闭动作：每条 step 必须严格等于 manifest
+`import_contract` 推导的 `/usr/bin/install -D -m 0644 source output`，env 必须
+为空，且 source/output 都位于当前 case。任何其它命令、附加 token 或缺失输出
+都会阻断。
 
 managed Git component 的 cwd 还受执行边界约束：
 
@@ -86,6 +99,8 @@ decision:
 命中 `COMPILE_POLICY.yaml` 的 unit 还必须满足对应命令绑定。
 当前 OEI 和 mkimage 的 `make` 命令必须显式包含与 manifest 相同的
 `REV=<silicon_revision>`；不能依赖 Makefile 默认值。
+对单清单项目，这些命令由 `COMPILE_PROFILE.yaml` 生成，AI 不能通过
+case 清单改写。本节的原始命令字段仅属于工具内部或兼容 target。
 
 SMFW rebuild 还必须使用 manifest 的 `smfw_config`，按顺序执行：
 

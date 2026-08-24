@@ -1,0 +1,32 @@
+# System Manager firmware 项目清单；刷新顺序和删除范围由 compile-tool 生成。
+schema_version: 1
+kind: project_compile_checklist
+project: imx-sm
+
+case_root: TBD
+source:
+  ref: TBD
+
+parameters:
+  config: TBD
+
+inputs:
+  artifacts: []
+  files: []
+
+toolchain:
+  make: /usr/bin/make
+  compiler: toolchain/arm-gnu-toolchain-14.3.rel1-x86_64-arm-none-eabi/bin/arm-none-eabi-gcc
+
+intent:
+  action: rebuild
+  reason: TBD
+
+build:
+  mode: isolated_git
+
+outputs:
+  smfw:
+    type: nxp.smfw.image
+    collect_from: build/${parameters.config}/m33_image.bin
+    publish_to: artifacts/imx-sm/m33_image.bin

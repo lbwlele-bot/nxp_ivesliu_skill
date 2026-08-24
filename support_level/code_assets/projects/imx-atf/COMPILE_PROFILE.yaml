@@ -1,0 +1,66 @@
+schema_version: 1
+id: imx-atf
+type: project_compile
+target: imx-atf
+component: imx-atf
+action: rebuild
+
+source:
+  id: imx-atf
+  path: imx-atf
+  case_path: sources/imx-atf
+  ref_kind: tag
+  remote: origin
+  remote_url: https://github.com/nxp-imx/imx-atf
+  update: if_missing
+
+parameters:
+  platform:
+    source: user
+    required: true
+    allowed: [imx94, imx95]
+  spd:
+    source: project
+    default: none
+    allowed: [none, opteed]
+
+configuration_parameters: [platform, spd]
+
+tools:
+  - name: make
+    path: /usr/bin/make
+    version_args: [--version]
+  - name: compiler
+    path: toolchain/arm-gnu-toolchain-14.3.rel1-x86_64-aarch64-none-linux-gnu/bin/aarch64-none-linux-gnu-gcc
+    version_args: [--version]
+
+watched_inputs: []
+
+outputs:
+  bl31:
+    type: nxp.atf.bl31
+    path: artifacts/imx-atf/bl31.bin
+    identity_parameters: [platform, spd]
+
+artifact_inputs: {}
+file_inputs: {}
+
+checklist_build:
+  mode: isolated_git
+  env:
+    CROSS_COMPILE: ${tool_prefix.compiler}
+  steps:
+    - name: build-imx-atf
+      command:
+        - /usr/bin/env
+        - -u
+        - LDFLAGS
+        - -u
+        - AS
+        - ${tools.make}
+        - PLAT=${parameters.platform}
+        - value: SPD=${parameters.spd}
+          omit_when:
+            parameter: spd
+            equals: none
+        - bl31

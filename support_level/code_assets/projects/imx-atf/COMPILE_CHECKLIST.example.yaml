@@ -1,0 +1,34 @@
+# 结构示例，不是已验证 case，也不应直接执行。
+schema_version: 1
+kind: project_compile_checklist
+project: imx-atf
+
+case_root: /home/ives/桌面/NXP_v2/support_level/work/example-imx95-flashbin
+
+source:
+  ref: lf-6.18.2-1.0.0
+
+parameters:
+  platform: imx95
+  spd: opteed
+
+inputs:
+  artifacts: []
+  files: []
+
+toolchain:
+  make: /usr/bin/make
+  compiler: toolchain/arm-gnu-toolchain-14.3.rel1-x86_64-aarch64-none-linux-gnu/bin/aarch64-none-linux-gnu-gcc
+
+intent:
+  action: rebuild
+  reason: 为需要 OP-TEE dispatcher 的 i.MX95 启动链生成 bl31.bin
+
+build:
+  mode: isolated_git
+
+outputs:
+  bl31:
+    type: nxp.atf.bl31
+    collect_from: build/${parameters.platform}/release/bl31.bin
+    publish_to: artifacts/imx-atf/bl31.bin

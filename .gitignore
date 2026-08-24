@@ -108,6 +108,7 @@ support_level/release_packages/m_freertos_sdk/*
 support_level/release_packages/scfw/*
 !support_level/release_packages/m_freertos_sdk/README.md
 !support_level/release_packages/m_freertos_sdk/RELATION.yaml
+!support_level/release_packages/m_freertos_sdk/PACKAGES.yaml
 !support_level/release_packages/scfw/README.md
 !support_level/release_packages/scfw/RELATION.yaml
 
@@ -137,10 +138,13 @@ support_level/compile_targets/zephyr/*
 !support_level/compile_targets/flashbin/RELATION.yaml
 !support_level/compile_targets/flashbin/DEPENDENCIES.yaml
 !support_level/compile_targets/flashbin/COMPILE_POLICY.yaml
+!support_level/compile_targets/flashbin/RECIPE_CONTRACTS.yaml
+!support_level/compile_targets/flashbin/FIXED_ASSETS.yaml
 !support_level/compile_targets/linux/README.md
 !support_level/compile_targets/linux/RELATION.yaml
 !support_level/compile_targets/m_freertos_sdk/README.md
 !support_level/compile_targets/m_freertos_sdk/RELATION.yaml
+!support_level/compile_targets/m_freertos_sdk/COMPILE_CHECKLIST.yaml
 !support_level/compile_targets/zephyr/README.md
 !support_level/compile_targets/zephyr/RELATION.yaml
 
@@ -180,14 +184,34 @@ support_level/code_assets/projects/real-time-edge-uboot/*
 support_level/code_assets/projects/uboot-imx/*
 !support_level/code_assets/projects/imx-atf/USAGE.md
 !support_level/code_assets/projects/imx-atf/RELATION.yaml
+!support_level/code_assets/projects/imx-atf/COMPILE_PROFILE.yaml
+!support_level/code_assets/projects/imx-atf/COMPILE_POLICY.yaml
+!support_level/code_assets/projects/imx-atf/COMPILE_CHECKLIST.yaml
+!support_level/code_assets/projects/imx-atf/COMPILE_CHECKLIST.example.yaml
 !support_level/code_assets/projects/imx-mkimage/USAGE.md
 !support_level/code_assets/projects/imx-mkimage/RELATION.yaml
+!support_level/code_assets/projects/imx-mkimage/COMPILE_PROFILE.yaml
+!support_level/code_assets/projects/imx-mkimage/COMPILE_POLICY.yaml
+!support_level/code_assets/projects/imx-mkimage/COMPILE_CHECKLIST.yaml
+!support_level/code_assets/projects/imx-mkimage/COMPILE_CHECKLIST.example.yaml
 !support_level/code_assets/projects/imx-oei/USAGE.md
 !support_level/code_assets/projects/imx-oei/RELATION.yaml
+!support_level/code_assets/projects/imx-oei/COMPILE_PROFILE.yaml
+!support_level/code_assets/projects/imx-oei/COMPILE_POLICY.yaml
+!support_level/code_assets/projects/imx-oei/COMPILE_CHECKLIST.yaml
+!support_level/code_assets/projects/imx-oei/COMPILE_CHECKLIST.example.yaml
 !support_level/code_assets/projects/imx-optee-os/USAGE.md
 !support_level/code_assets/projects/imx-optee-os/RELATION.yaml
+!support_level/code_assets/projects/imx-optee-os/COMPILE_PROFILE.yaml
+!support_level/code_assets/projects/imx-optee-os/COMPILE_POLICY.yaml
+!support_level/code_assets/projects/imx-optee-os/COMPILE_CHECKLIST.yaml
+!support_level/code_assets/projects/imx-optee-os/COMPILE_CHECKLIST.example.yaml
 !support_level/code_assets/projects/imx-sm/USAGE.md
 !support_level/code_assets/projects/imx-sm/RELATION.yaml
+!support_level/code_assets/projects/imx-sm/COMPILE_PROFILE.yaml
+!support_level/code_assets/projects/imx-sm/COMPILE_POLICY.yaml
+!support_level/code_assets/projects/imx-sm/COMPILE_CHECKLIST.yaml
+!support_level/code_assets/projects/imx-sm/COMPILE_CHECKLIST.example.yaml
 !support_level/code_assets/projects/linux-imx/USAGE.md
 !support_level/code_assets/projects/linux-imx/RELATION.yaml
 !support_level/code_assets/projects/mcuxsdk-core/USAGE.md
@@ -200,8 +224,16 @@ support_level/code_assets/projects/uboot-imx/*
 !support_level/code_assets/projects/real-time-edge-linux/RELATION.yaml
 !support_level/code_assets/projects/real-time-edge-uboot/USAGE.md
 !support_level/code_assets/projects/real-time-edge-uboot/RELATION.yaml
+!support_level/code_assets/projects/real-time-edge-uboot/COMPILE_PROFILE.yaml
+!support_level/code_assets/projects/real-time-edge-uboot/COMPILE_POLICY.yaml
+!support_level/code_assets/projects/real-time-edge-uboot/COMPILE_CHECKLIST.yaml
+!support_level/code_assets/projects/real-time-edge-uboot/COMPILE_CHECKLIST.example.yaml
 !support_level/code_assets/projects/uboot-imx/USAGE.md
 !support_level/code_assets/projects/uboot-imx/RELATION.yaml
+!support_level/code_assets/projects/uboot-imx/COMPILE_PROFILE.yaml
+!support_level/code_assets/projects/uboot-imx/COMPILE_POLICY.yaml
+!support_level/code_assets/projects/uboot-imx/COMPILE_CHECKLIST.yaml
+!support_level/code_assets/projects/uboot-imx/COMPILE_CHECKLIST.example.yaml
 
 support_level/code_assets/workspaces/*
 !support_level/code_assets/workspaces/README.md
@@ -241,6 +273,8 @@ support_level/tools/uuu/*
 !support_level/tools/compile-tool/USAGE.md
 !support_level/tools/compile-tool/REQUEST_SCHEMA.md
 !support_level/tools/compile-tool/SOFTWARE_STATE_SCHEMA.md
+!support_level/tools/compile-tool/PROJECT_PROFILE_SCHEMA.md
+!support_level/tools/compile-tool/MINIMAL_CHECKLIST_DESIGN.md
 !support_level/tools/compile-tool/RELATION.yaml
 !support_level/tools/compile-tool/compile_tool/
 support_level/tools/compile-tool/compile_tool/*
@@ -250,6 +284,9 @@ support_level/tools/compile-tool/tests/*
 !support_level/tools/compile-tool/tests/test_compile_tool.py
 !support_level/tools/compile-tool/tests/test_generic_state.py
 !support_level/tools/compile-tool/tests/test_state_workflow.py
+!support_level/tools/compile-tool/tests/test_project_profiles.py
+!support_level/tools/compile-tool/tests/test_checklists.py
+!support_level/tools/compile-tool/tests/test_m_sdk.py
 !support_level/tools/imx-rm/README.md
 !support_level/tools/imx-rm/USAGE.md
 !support_level/tools/imx-rm/RELATION.yaml

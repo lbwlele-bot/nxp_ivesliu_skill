@@ -5,6 +5,8 @@
 - 参数规则：compile target / project / workspace 旁边的 `COMPILE_POLICY.yaml`
 - manifest / state schema：`SOFTWARE_STATE_SCHEMA.md`
 - request schema：`REQUEST_SCHEMA.md`
+- 项目单清单入口：`MINIMAL_CHECKLIST_DESIGN.md`
+- 内部 profile / artifact schema：`PROJECT_PROFILE_SCHEMA.md`
 
 ## 使用边界
 
@@ -30,6 +32,53 @@ compile target、项目 `USAGE.md` 和工程判断。
 或 `west`。
 
 ## 标准流程
+
+已经带 `COMPILE_CHECKLIST.yaml` 的项目统一使用单清单入口。当前包括：
+
+- `imx-oei`
+- `imx-atf`
+- `uboot-imx`
+- `real-time-edge-uboot`
+- `imx-optee-os`
+- `imx-sm`
+- `imx-mkimage`
+- `m_freertos_sdk`（compile target，多 job producer）
+
+先把项目旁 `COMPILE_CHECKLIST.yaml` 复制到：
+
+```text
+work/<case>/records/compile/<project>/compile.yaml
+```
+
+填写清单后只提交这一份：
+
+```bash
+compile-tool prepare work/<case>/records/compile/<project>/compile.yaml
+compile-tool run work/<case>/records/compile/<project>/compile.yaml
+```
+
+AI 只填写模板允许的参数、输入选择和 intent；原始命令由项目
+`COMPILE_PROFILE.yaml` 的受控 token 模板生成。`prepare` 内部完成
+requirements、source plan、assess、命令门禁和完整 cwd/env/原始命令展示；
+`run` 必须消费未变的同一清单和 prepare 记录。内部 manifest/request
+由工具生成，AI 不维护。任何已经提供项目清单的 target，直接提交其
+manifest/request 执行都会被阻断。
+
+M SDK 使用专用公开清单
+`records/compile/m_freertos_sdk/compile.yaml`。清单可以声明多个独立 job，
+工具按登记 SDK 版本自动选择 legacy 或 West backend，源码构建固定发布同源
+ELF+BIN，预编译只允许执行校验、复制和发布。AI 同样不能填写 backend、命令、
+输出路径或内部 manifest/request。
+
+`imx-mkimage` 还会按 `compile_targets/flashbin/RECIPE_CONTRACTS.yaml` 检查
+当前 `SOC + recipe` 的 producer 角色、输入槽位和隔离源码内落位。当前先覆盖
+`iMX94/iMX95` 的 `flash_a55` 与 `flash_all`；其它 recipe 不会被静默放行。
+固定 AHAB/DDR firmware 同时绑定
+`compile_targets/flashbin/FIXED_ASSETS.yaml`；工具校验 role、目标文件名和
+SHA-256，不允许只靠文件名把相近版本混入当前 case。
+含 M payload 的 recipe 只接受 M producer 导出的 `nxp.mcore.bin`；工具同时
+验证 producer 成功状态、当前文件哈希、SoC 与 core role。裸 M 文件输入和
+`nxp.mcore.elf` 都不能进入 flash.bin。
 
 通用 target：
 
@@ -82,6 +131,9 @@ assessment hash、source acquisition hash 和 state integrity hash 继续保留�
 因为它们分别用于状态过期、源码准备计划和状态损坏检测，不用于绑定
 prepare/run 命令文本。
 
+跨项目 artifact 引用也进入 assessment hash。producer manifest、成功状态、
+artifact 内容或匹配身份变化后，consumer 的旧 assessment 会失效。
+
 ## 源码与构建执行边界
 
 managed Git 的 `sources/<repo>` 只承载源码身份：HEAD、tracked diff 和
@@ -104,6 +156,11 @@ managed Git 的 `sources/<repo>` 只承载源码身份：HEAD、tracked diff 和
 没有 `isolated_git` policy 的 managed Git component 若直接把源码目录作为
 cwd，`prepare` 和 `run` 都会阻断；项目应改为真正的 out-of-tree 构建，或在
 对应长期 policy 中声明隔离执行，不能添加生成路径排除规则。
+
+通用 schema v2 component 还支持受控 `operation: import`。该操作只允许由
+公开清单生成，step 必须与 manifest 的 `import_contract` 一一对应，且只能是
+`/usr/bin/install -D -m 0644 <case-source> <declared-output>`；不能夹带 shell
+命令、环境变量或 case 外路径。
 
 ## 决策范围和 destructive 操作
 
@@ -193,6 +250,8 @@ parameters:
 - 非 Git 内容只采集显式 watched inputs
 - flashbin 记录各启用输入产物和最终 `flash.bin` 的 SHA-256
 - 不记录命令 hash；命令文本不参与软件状态或依赖身份
+- 项目级 consumer 记录跨 manifest artifact 的 producer state identity、type、
+  identity、origin 和 SHA-256
 
 ## 退出状态
 

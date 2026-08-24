@@ -29,5 +29,9 @@ warnings:
 
 evidence:
   - USAGE.md
+  - COMPILE_CHECKLIST.yaml
+  - COMPILE_CHECKLIST.example.yaml
+  - COMPILE_PROFILE.yaml
+  - COMPILE_POLICY.yaml
   - ../../../compile_targets/flashbin/README.md
   - ../../../software_stacks/rte.md

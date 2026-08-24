@@ -1,0 +1,68 @@
+schema_version: 1
+id: imx-oei
+type: project_compile
+target: imx-oei
+component: imx-oei
+action: rebuild
+
+source:
+  id: imx-oei
+  path: imx-oei
+  case_path: sources/imx-oei
+  ref_kind: tag
+  remote: origin
+  remote_url: https://github.com/nxp-imx/imx-oei
+  update: if_missing
+
+parameters:
+  silicon_revision:
+    source: user
+    required: true
+    pattern: '^[A-Za-z][0-9]$'
+  board:
+    source: user
+    required: true
+  oei_type:
+    source: project
+    default: ddr
+    allowed: [ddr]
+
+configuration_parameters:
+  - silicon_revision
+  - board
+  - oei_type
+
+tools:
+  - name: make
+    path: /usr/bin/make
+    version_args: [--version]
+  - name: compiler
+    path: toolchain/arm-gnu-toolchain-14.3.rel1-x86_64-arm-none-eabi/bin/arm-none-eabi-gcc
+    version_args: [--version]
+
+watched_inputs: []
+
+outputs:
+  oei_ddr:
+    type: nxp.oei.ddr-image
+    path: artifacts/imx-oei/oei-m33-ddr.bin
+    identity_parameters:
+      - silicon_revision
+      - board
+      - oei_type
+
+artifact_inputs: {}
+file_inputs: {}
+
+checklist_build:
+  mode: isolated_git
+  env:
+    OEI_CROSS_COMPILE: ${tool_prefix.compiler}
+  steps:
+    - name: build-imx-oei
+      command:
+        - ${tools.make}
+        - REV=${parameters.silicon_revision}
+        - R=${parameters.silicon_revision}
+        - board=${parameters.board}
+        - oei=${parameters.oei_type}

@@ -1,0 +1,10 @@
+schema_version: 1
+target: imx-optee-os
+rules: {}
+command_rules: {}
+execution_rules:
+  imx-optee-os-isolated-source:
+    component: imx-optee-os
+    mode: isolated_git
+    source_kind: managed_git
+    reason: OP-TEE writes its out directory below the source tree by default.

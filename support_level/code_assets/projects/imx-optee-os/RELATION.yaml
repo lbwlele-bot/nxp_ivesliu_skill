@@ -15,7 +15,8 @@ relations:
     - rte
   release_packages: []
   boards: []
-  tools: []
+  tools:
+    - compile-tool
 
 case_required_for:
   - patched_optee
@@ -26,6 +27,7 @@ warnings:
   - OP-TEE requirement is decided by the software stack and current flashbin chain, not by this project alone.
   - If tee.bin is required, preserve the tee-raw.bin to tee.bin provenance in the current case.
   - Do not treat an existing tee.bin file as valid without confirming source, version, and configuration.
+  - The checklist publishes tee-raw.bin as a provenance-tracked tee artifact.
 
 evidence:
   - USAGE.md

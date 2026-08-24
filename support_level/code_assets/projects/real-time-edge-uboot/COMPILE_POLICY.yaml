@@ -1,0 +1,10 @@
+schema_version: 1
+target: real-time-edge-uboot
+rules: {}
+command_rules: {}
+execution_rules:
+  real-time-edge-uboot-isolated-source:
+    component: real-time-edge-uboot
+    mode: isolated_git
+    source_kind: managed_git
+    reason: RTE U-Boot configuration and build output must remain in an isolated source copy.

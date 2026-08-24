@@ -26,8 +26,10 @@ warnings:
   - Release package versions cannot be changed with checkout, tag, or branch.
   - Do not use a nearby SDK version as a silent substitute for a missing target version.
   - Extract, patch, and build SDK projects under support_level/work/<case>/.
+  - PACKAGES.yaml binds public package IDs to exact SHA-256, release, SoC, board, core role, and known compiler constraints.
 
 evidence:
   - README.md
+  - PACKAGES.yaml
   - ../../compile_targets/m_freertos_sdk/README.md
   - ../../software_stacks/rte.md

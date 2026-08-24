@@ -3,6 +3,14 @@
 - 真实源码目录：`./real-time-edge-uboot/`
 - 最近观察 ref：`baremetal-uboot_v2020.04` / `Real-Time-Edge-v2.0-baremetal-202107`，使用前重新核对
 - 主要链路：`rte`、`U-Boot`、启动固件输入
+- 对外编译清单：`COMPILE_CHECKLIST.yaml`
+
+## 受控单清单入口
+
+软件栈明确选中该源码线后，复制清单到
+`records/compile/real-time-edge-uboot/compile.yaml`。它与通用 U-Boot 导出
+相同类型的 `uboot_bin` / `uboot_spl`，但源码身份和状态完全独立。清单存在
+不代表当前旧本地副本已经支持 i.MX943/i.MX95。
 
 这是 Real-Time Edge U-Boot 源码线的本地副本。
 

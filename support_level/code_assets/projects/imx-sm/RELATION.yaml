@@ -15,7 +15,8 @@ relations:
     - rte
   release_packages: []
   boards: []
-  tools: []
+  tools:
+    - compile-tool
 
 case_required_for:
   - patched_smfw
@@ -26,6 +27,7 @@ warnings:
   - RTE-specific SMFW config and patches are software-stack constraints, not generic imx-sm rules.
   - Do not start here when the actual target is a complete flash.bin; route through the flashbin compile target first.
   - A standalone m33_image.bin build does not mean flash.bin is complete.
+  - The project checklist owns the safe generated-config refresh sequence.
 
 evidence:
   - USAGE.md

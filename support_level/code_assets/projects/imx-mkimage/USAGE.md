@@ -4,6 +4,9 @@
 - 最近观察分支（使用前重新核对）：`lf-6.12.49_2.2.0`
 - 最近观察版本（使用前重新核对）：`lf-6.12.49-2.2.0`
 - 主要链路：`flash.bin` 打包工具
+- 对外编译清单：`COMPILE_CHECKLIST.yaml`
+- 内部编译 profile：`COMPILE_PROFILE.yaml`
+- 项目硬门禁：`COMPILE_POLICY.yaml`
 
 ## 角色
 
@@ -38,6 +41,36 @@
 如果这些还没确定，先回到 `compile_targets/flashbin/README.md`。
 如果任务属于 `RTE`，先读 `software_stacks/rte.md`。
 
+## 项目级受控打包入口
+
+imx-mkimage 现在作为独立 consumer/assembler 管理：它只约束自己的源码、
+参数、隔离执行、输入槽位和最终 `flash.bin`，不替 OEI、ATF、U-Boot 等
+producer 定义编译方法。
+
+`COMPILE_CHECKLIST.yaml` 复制到 `records/compile/imx-mkimage/compile.yaml`，填写
+revision、SOC、recipe、producer/fixed input 选择和本轮 intent 后，
+只执行 `compile-tool prepare <compile.yaml>` 和 `compile-tool run <compile.yaml>`。
+原始 make 命令由 profile 生成，AI 不填写。
+
+`COMPILE_PROFILE.yaml` 定义 `oei`、`atf`、`uboot_bin`、`uboot_spl`、`optee`、
+`smfw`、`firmware` 和 `m_payload` artifact 输入槽位；M payload 允许多个，
+但只能引用 M SDK 公共清单导出的 `nxp.mcore.bin`。公共清单没有裸 M 文件入口。
+`oei_enabled=YES` 时必须选择 `oei` artifact，并和 consumer 的 silicon
+revision 一致。
+
+`compile_targets/flashbin/RECIPE_CONTRACTS.yaml` 进一步约束当前
+`SOC + recipe` 的必需角色与 `stage_to`。当前只覆盖 `iMX94/iMX95` 的
+`flash_a55` 和 `flash_all`；未登记 recipe 不会静默执行。
+
+`COMPILE_POLICY.yaml` 独立要求 make 命令显式传 `REV=<value>`，并强制所有
+step 在项目自己的 `isolated_git` 副本中执行。
+
+OEI、ATF、两条 U-Boot、OP-TEE 和 SMFW 已有独立单清单。
+已知 i.MX95 B0 和 i.MX943 A0 的 AHAB/DDR firmware 由
+`compile_targets/flashbin/FIXED_ASSETS.yaml` 绑定 SHA-256。M payload 已由独立
+`m_freertos_sdk` producer 接通；SCFW 尚未完成项目自治迁移，完整旧链路仍可继续使用
+`records/compile-manifest.yaml` 深度模式。
+
 ## 共享源码规则
 
 1. 先用 `git status --short --branch` 和 `git describe --tags --always --dirty` 核对当前 ref
@@ -56,11 +89,23 @@
 - `oei-m33-ddr.bin`
 - `m33_image.bin`
 - `tee.bin`，仅当所选软件栈需要 `OP-TEE`
-- M 核 payload，只有所选 recipe / 软件栈 / case 需要时才带入
+- M 核 BIN artifact，只有所选 recipe / 软件栈 / case 需要时才带入
 - DDR / ELE / AHAB 等固定 firmware blob
 
 输入集合由上层 `flashbin` 编排和软件栈决定。
 不要只因为某个文件在目录里存在，就默认它应该进入本次 `flash.bin`。
+
+项目级路径中，输入通过同 case producer manifest 的具名 artifact 引用，工具
+验证 producer 成功状态、hash、type 和身份参数。它不会自动跨 manifest 执行
+producer；应先完成 producer，再 assess imx-mkimage。
+
+当前 recipe contract 强制：
+
+- `iMX95/flash_all` 消费 `soc=imx95, core_role=m7`，固定暂存为
+  `iMX95/m7_image.bin`；
+- `iMX94/flash_all` 分别消费 `soc=imx943, core_role=m33s/m70/m71`，固定暂存为
+  `iMX94/m33s_image.bin`、`m70_image.bin`、`m71_image.bin`；
+- producer 文件缺失、哈希变化、SoC/core role/type 错误或传入 ELF 都会阻断。
 
 ## 常见命令形态
 

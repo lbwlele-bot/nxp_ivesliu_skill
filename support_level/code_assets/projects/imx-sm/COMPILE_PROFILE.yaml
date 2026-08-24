@@ -1,0 +1,68 @@
+schema_version: 1
+id: imx-sm
+type: project_compile
+target: imx-sm
+component: imx-sm
+action: rebuild
+
+source:
+  id: imx-sm
+  path: imx-sm
+  case_path: sources/imx-sm
+  ref_kind: tag
+  remote: origin
+  remote_url: https://github.com/nxp-imx/imx-sm
+  update: if_missing
+
+parameters:
+  config:
+    source: user
+    required: true
+    pattern: '^[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)*$'
+
+configuration_parameters: [config]
+
+tools:
+  - name: make
+    path: /usr/bin/make
+    version_args: [--version]
+  - name: compiler
+    path: toolchain/arm-gnu-toolchain-14.3.rel1-x86_64-arm-none-eabi/bin/arm-none-eabi-gcc
+    version_args: [--version]
+
+watched_inputs: []
+
+outputs:
+  smfw:
+    type: nxp.smfw.image
+    path: artifacts/imx-sm/m33_image.bin
+    identity_parameters: [config]
+
+artifact_inputs: {}
+file_inputs: {}
+
+checklist_build:
+  mode: isolated_git
+  env: {}
+  steps:
+    - name: remove-generated-smfw-config
+      command:
+        - /usr/bin/rm
+        - -rf
+        - configs/${parameters.config}
+    - name: really-clean-imx-sm
+      command:
+        - ${tools.make}
+        - really-clean
+    - name: configure-imx-sm
+      command:
+        - ${tools.make}
+        - SM_CROSS_COMPILE=${tool_prefix.compiler}
+        - config=${parameters.config}
+        - cfg
+    - name: build-imx-sm
+      command:
+        - ${tools.make}
+        - SM_CROSS_COMPILE=${tool_prefix.compiler}
+        - config=${parameters.config}
+        - all

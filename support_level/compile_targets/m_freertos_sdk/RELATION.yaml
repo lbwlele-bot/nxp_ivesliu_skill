@@ -29,8 +29,12 @@ warnings:
   - Missing SDK versions must be provided by the user or confirmed as local assets; do not substitute nearby versions.
   - SDK_2_9_0_EVK-MIMX8DXL requires GCC 9.2.1 and compile-tool blocks a conflicting compiler identity.
   - A built M core payload is not the same as a complete flash.bin.
+  - Public builds must use records/compile/m_freertos_sdk/compile.yaml; backend, commands, outputs, and internal requests are tool-owned.
+  - Source builds publish sibling ELF and BIN; flash.bin consumes only nxp.mcore.bin.
 
 evidence:
   - README.md
+  - COMPILE_CHECKLIST.yaml
+  - ../../release_packages/m_freertos_sdk/PACKAGES.yaml
   - ../../release_packages/m_freertos_sdk/README.md
   - ../../software_stacks/rte.md

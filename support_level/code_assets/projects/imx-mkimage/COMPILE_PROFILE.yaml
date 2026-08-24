@@ -1,0 +1,137 @@
+schema_version: 1
+id: imx-mkimage
+type: project_compile
+target: imx-mkimage
+component: imx-mkimage
+action: repack
+
+source:
+  id: imx-mkimage
+  path: imx-mkimage
+  case_path: sources/imx-mkimage
+  ref_kind: tag
+  remote: origin
+  remote_url: https://github.com/nxp-imx/imx-mkimage
+  update: if_missing
+
+parameters:
+  silicon_revision:
+    source: user
+    required: true
+    pattern: '^[A-Za-z][0-9]$'
+  soc:
+    source: user
+    required: true
+    allowed: [iMX94, iMX95]
+  recipe:
+    source: user
+    required: true
+    pattern: '^flash_[A-Za-z0-9_]+$'
+  lpddr_type:
+    source: user
+    required: true
+    allowed: [lpddr4, lpddr5]
+  oei_enabled:
+    source: project
+    default: 'NO'
+    allowed: ['YES', 'NO']
+
+configuration_parameters:
+  - silicon_revision
+  - soc
+  - recipe
+  - lpddr_type
+  - oei_enabled
+
+tools:
+  - name: make
+    path: /usr/bin/make
+    version_args: [--version]
+
+watched_inputs: []
+
+outputs:
+  flashbin:
+    type: nxp.boot.flashbin
+    path: artifacts/imx-mkimage/flash.bin
+    identity_parameters:
+      - silicon_revision
+      - soc
+      - recipe
+      - lpddr_type
+      - oei_enabled
+
+artifact_inputs:
+  oei:
+    type: nxp.oei.ddr-image
+    multiple: false
+    required_when:
+      parameter: oei_enabled
+      equals: 'YES'
+    parameter_matches:
+      silicon_revision: silicon_revision
+  atf:
+    type: nxp.atf.bl31
+    multiple: false
+    parameter_matches: {}
+  uboot_bin:
+    type: nxp.uboot.u-boot-bin
+    multiple: false
+    parameter_matches: {}
+  uboot_spl:
+    type: nxp.uboot.spl
+    multiple: false
+    parameter_matches: {}
+  optee:
+    type: nxp.optee.image
+    multiple: false
+    parameter_matches: {}
+  smfw:
+    type: nxp.smfw.image
+    multiple: false
+    parameter_matches: {}
+  firmware:
+    type: nxp.fixed-firmware
+    multiple: true
+    parameter_matches: {}
+  m_payload:
+    type: nxp.mcore.bin
+    multiple: true
+    parameter_matches: {}
+
+file_inputs:
+  ahab:
+    multiple: false
+  atf:
+    multiple: false
+  uboot_bin:
+    multiple: false
+  uboot_spl:
+    multiple: false
+  optee:
+    multiple: false
+  smfw:
+    multiple: false
+  firmware:
+    multiple: true
+
+input_contract:
+  path: compile_targets/flashbin/RECIPE_CONTRACTS.yaml
+  selectors: [soc, recipe]
+
+fixed_asset_contract:
+  path: compile_targets/flashbin/FIXED_ASSETS.yaml
+  selectors: [soc, silicon_revision, lpddr_type, oei_enabled]
+
+checklist_build:
+  mode: isolated_git
+  env: {}
+  steps:
+    - name: build-imx-mkimage
+      command:
+        - ${tools.make}
+        - SOC=${parameters.soc}
+        - REV=${parameters.silicon_revision}
+        - OEI=${parameters.oei_enabled}
+        - LPDDR_TYPE=${parameters.lpddr_type}
+        - ${parameters.recipe}

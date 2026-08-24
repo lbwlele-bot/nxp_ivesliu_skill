@@ -1,0 +1,18 @@
+schema_version: 1
+target: imx-sm
+
+rules: {}
+
+command_rules:
+  imx-sm-config-refresh:
+    component: imx-sm
+    kind: smfw_config_refresh
+    parameter: config
+    reason: make cfg can leave stale generated code unless the matching generated config directory is removed first.
+
+execution_rules:
+  imx-sm-isolated-source:
+    component: imx-sm
+    mode: isolated_git
+    source_kind: managed_git
+    reason: SMFW refresh deletes generated config state and writes build output in-tree.

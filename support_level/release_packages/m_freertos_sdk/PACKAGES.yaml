@@ -1,0 +1,96 @@
+schema_version: 1
+kind: m_freertos_sdk_package_catalog
+
+packages:
+  SDK_25_09_00_IMX943-EVK:
+    archive: SDK_25_09_00_IMX943-EVK.tar.gz
+    sha256: df3241bf8704950bc1f93641985ae1867e52980324afd422c97fd9f9ea797486
+    sdk_release: '25.09.00'
+    soc: imx943
+    boards:
+      imx943evk:
+        core_roles:
+          cm33_core1: m33s
+          cm7_core0: m70
+          cm7_core1: m71
+
+  SDK_26_03_00_MCIMX93-EVK:
+    archive: SDK_26_03_00_MCIMX93-EVK.zip
+    sha256: a92c8b020b36a85fe54e909951f56f8670d6fc1d0634032cb72bc3fcf5cceb07
+    sdk_release: '26.03.00'
+    soc: imx93
+    boards:
+      mcimx93evk:
+        core_roles:
+          cm33: m33
+
+  SDK_26_06_00_IMX95LPD5EVK-19:
+    archive: SDK_26_06_00_IMX95LPD5EVK-19.zip
+    sha256: 688e876db42917f87955ad8516aea385fd5c91cb07d6cbf3eb4488707ddca2bc
+    sdk_release: '26.06.00'
+    soc: imx95
+    boards:
+      imx95lpd5evk19:
+        core_roles:
+          cm7: m7
+
+  SDK_2_13_0_EVK-MIMX8MN:
+    archive: SDK_2_13_0_EVK-MIMX8MN.tar.gz
+    sha256: 895dc330c1429c26a7073aaa6e079b2441f7855d1a608630402abca90a566f69
+    sdk_release: '2.13.0'
+    soc: imx8mn
+    boards:
+      evkmimx8mn:
+        core_roles:
+          cm7: m7
+
+  SDK_2_16_000_EVK-MIMX8MN:
+    archive: SDK_2_16_000_EVK-MIMX8MN.tar.gz
+    sha256: 4119307b28c4d39359ea409342b03a1a2d36343513b20ace3852977d3eae7e62
+    sdk_release: '2.16.000'
+    soc: imx8mn
+    boards:
+      evkmimx8mn:
+        core_roles:
+          cm7: m7
+
+  SDK_2_16_000_MCIMX93-EVK:
+    archive: SDK_2_16_000_MCIMX93-EVK.tar.gz
+    sha256: bfead1f81f67cd26fb78d4dc53e1a2a24b90ee345e5d2ff098611d880fa4db6b
+    sdk_release: '2.16.000'
+    soc: imx93
+    boards:
+      mcimx93evk:
+        core_roles:
+          cm33: m33
+
+  SDK_2_8_0_EVK-MIMX8MN:
+    archive: SDK_2_8_0_EVK-MIMX8MN.tar.gz
+    sha256: b984aeca4447b14722ddc1a87989285cd3be975e10ed82eef8b641b05d4ac511
+    sdk_release: '2.8.0'
+    soc: imx8mn
+    boards:
+      evkmimx8mn:
+        core_roles:
+          cm7: m7
+
+  SDK_2_9_0_EVK-MIMX8DXL:
+    archive: SDK_2_9_0_EVK-MIMX8DXL.tar.gz
+    sha256: 8c56255ada8b44dd12ebe916e7dabfd9807146d6e9269c26597acdfdac49ff28
+    sdk_release: '2.9.0'
+    soc: imx8dxl
+    compiler_version_contains: 9.2.1
+    boards:
+      evkmimx8dxl:
+        core_roles:
+          cm4: m4
+
+  SDK_2_9_0_EVK-MIMX8MN:
+    archive: SDK_2_9_0_EVK-MIMX8MN.tar.gz
+    sha256: bce9e35007d0d5dfb7b3aed8b385d6613ef108d6f6feec1161f5062f53767db1
+    sdk_release: '2.9.0'
+    soc: imx8mn
+    boards:
+      evkmimx8mn:
+        core_roles:
+          cm7: m7

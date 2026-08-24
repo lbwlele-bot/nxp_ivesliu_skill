@@ -1,0 +1,10 @@
+schema_version: 1
+target: uboot-imx
+rules: {}
+command_rules: {}
+execution_rules:
+  uboot-imx-isolated-source:
+    component: uboot-imx
+    mode: isolated_git
+    source_kind: managed_git
+    reason: U-Boot configuration and build output must remain inside a disposable isolated source copy.

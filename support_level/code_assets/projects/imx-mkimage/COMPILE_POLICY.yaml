@@ -1,0 +1,21 @@
+schema_version: 1
+target: imx-mkimage
+
+rules:
+  imx-mkimage-silicon-revision:
+    component: imx-mkimage
+    parameter: silicon_revision
+    resolution: must_ask_user
+    command:
+      executables: [make]
+      assignments: [REV]
+    reason: imx-mkimage revision selects revision-specific packaging inputs and behavior.
+
+command_rules: {}
+
+execution_rules:
+  imx-mkimage-isolated-source:
+    component: imx-mkimage
+    mode: isolated_git
+    source_kind: managed_git
+    reason: imx-mkimage stages inputs and generates tools and containers in-tree.

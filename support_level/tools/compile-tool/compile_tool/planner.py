@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 
 from .common import ToolError, hash_data
+from .artifacts import resolve_artifact_inputs, semantic_artifact_inputs
 from .fingerprints import (
     configuration_snapshot,
     content_identity,
@@ -379,6 +380,7 @@ def _generic_component_snapshot(
     previous: dict[str, Any],
     source_snapshots: dict[str, dict[str, Any]],
     dependency_states: dict[str, str],
+    artifact_snapshots: dict[str, dict[str, Any]],
 ) -> tuple[dict[str, Any], list[str]]:
     configuration = configuration_snapshot(
         component["configuration"], previous.get("configuration")
@@ -392,6 +394,9 @@ def _generic_component_snapshot(
     )
     execution = execution_snapshot(component)
     return {
+        "kind": component["kind"],
+        "origin": component.get("origin"),
+        "import_contract": component.get("import_contract", []),
         "sources": {
             source_id: source_snapshots[source_id]
             for source_id in component["sources"]
@@ -402,12 +407,19 @@ def _generic_component_snapshot(
         "outputs": outputs,
         "dependencies": component["depends_on"],
         "dependency_states": dependency_states,
+        "artifact_inputs": {
+            input_id: artifact_snapshots[input_id]
+            for input_id in component["artifact_inputs"]
+        },
         **({"execution": execution} if execution is not None else {}),
     }, output_errors
 
 
 def _semantic_generic_snapshot(snapshot: dict[str, Any]) -> dict[str, Any]:
     return {
+        "kind": snapshot.get("kind", "build"),
+        "origin": snapshot.get("origin"),
+        "import_contract": snapshot.get("import_contract", []),
         "sources": {
             source_id: _semantic_source(source)
             for source_id, source in snapshot["sources"].items()
@@ -418,6 +430,7 @@ def _semantic_generic_snapshot(snapshot: dict[str, Any]) -> dict[str, Any]:
         "outputs": content_identity(snapshot["outputs"]),
         "dependencies": snapshot["dependencies"],
         "dependency_states": snapshot["dependency_states"],
+        "artifact_inputs": semantic_artifact_inputs(snapshot["artifact_inputs"]),
         "execution": snapshot.get("execution"),
     }
 
@@ -431,6 +444,7 @@ def _generic_state_identity(component: dict[str, Any]) -> str:
         "outputs",
         "dependencies",
         "dependency_states",
+        "artifact_inputs",
     }
     if not required.issubset(component):
         return hash_data({"invalid_component_state": sorted(component)})
@@ -465,9 +479,16 @@ def _generic_decision(
             "outputs",
             "dependencies",
             "dependency_states",
+            "artifact_inputs",
         }
         if not required.issubset(previous):
             return "rebuild", ["成功构建记录字段不完整"]
+        if snapshot.get("kind", "build") != previous.get("kind", "build"):
+            reasons.append("组件操作类型变化")
+        if snapshot.get("origin") != previous.get("origin"):
+            reasons.append("产物来源或证据强度变化")
+        if snapshot.get("import_contract", []) != previous.get("import_contract", []):
+            reasons.append("预编译导入映射变化")
         if {
             key: _semantic_source(value)
             for key, value in snapshot["sources"].items()
@@ -496,6 +517,10 @@ def _generic_decision(
             reasons.append("显式依赖集合变化")
         if snapshot["dependency_states"] != previous["dependency_states"]:
             reasons.append("显式上游成功状态变化")
+        if semantic_artifact_inputs(snapshot["artifact_inputs"]) != semantic_artifact_inputs(
+            previous["artifact_inputs"]
+        ):
+            reasons.append("跨项目输入产物或生产者状态变化")
         if snapshot.get("execution") != previous.get("execution"):
             reasons.append("构建执行隔离契约变化")
     reasons.extend(output_errors)
@@ -508,6 +533,8 @@ def _validate_known_tool_rules(
     snapshot: dict[str, Any],
 ) -> None:
     if manifest["target"] != "m_freertos_sdk":
+        return
+    if (component.get("origin") or {}).get("mode") == "prebuilt_import":
         return
     release_markers = [
         manifest["parameters"].get("software_release", {}).get("value", "")
@@ -549,6 +576,7 @@ def _assess_generic(manifest: dict[str, Any]) -> dict[str, Any]:
         source_id: source_snapshot(source, previous_sources.get(source_id))
         for source_id, source in manifest["sources"].items()
     }
+    artifact_snapshots = resolve_artifact_inputs(manifest)
     observations: dict[str, dict[str, Any]] = {}
     snapshots: dict[str, dict[str, Any]] = {}
     for component_id in manifest["component_order"]:
@@ -559,16 +587,20 @@ def _assess_generic(manifest: dict[str, Any]) -> dict[str, Any]:
             previous,
             source_snapshots,
             _dependency_state_identities(state, component["depends_on"]),
+            artifact_snapshots,
         )
         _validate_known_tool_rules(manifest, component, snapshot)
         action, reasons = _generic_decision(snapshot, previous, output_errors)
+        changed_action = "import" if component["kind"] == "import" else "rebuild"
+        if action == "rebuild":
+            action = changed_action
         changed_dependencies = [
             dependency
             for dependency in component["depends_on"]
             if observations[dependency]["changed"]
         ]
         if changed_dependencies:
-            action = "rebuild"
+            action = changed_action
             reasons.append("显式上游变化：" + ", ".join(changed_dependencies))
         snapshots[component_id] = snapshot
         observations[component_id] = {
@@ -578,9 +610,9 @@ def _assess_generic(manifest: dict[str, Any]) -> dict[str, Any]:
         }
 
     observed_units = [
-        {"component": component_id, "action": "rebuild"}
+        {"component": component_id, "action": observations[component_id]["action"]}
         for component_id in manifest["component_order"]
-        if observations[component_id]["action"] == "rebuild"
+        if observations[component_id]["action"] in {"rebuild", "import"}
     ]
     semantic_payload = {
         "manifest_hash": manifest["hash"],
@@ -803,20 +835,47 @@ def _record_generic_unit(
         previous,
         current_sources,
         _dependency_state_identities(state, component["depends_on"]),
+        resolve_artifact_inputs(manifest),
     )
     _validate_known_tool_rules(manifest, component, current)
     if output_errors:
         raise ToolError(
             f"{component_id} did not produce valid outputs: " + "; ".join(output_errors)
         )
+    if component["kind"] == "import":
+        current_by_path = {entry["path"]: entry for entry in current["outputs"]}
+        for contract in component["import_contract"]:
+            imported = file_snapshots(
+                [contract["source"]], None, require_nonempty=True
+            )[0]
+            published = current_by_path[contract["output"]]
+            if imported["sha256"] != published["sha256"]:
+                raise ToolError(
+                    f"{component_id} imported output differs from its declared source: "
+                    f"{contract['output']}"
+                )
+    for export in manifest.get("exports", {}).values():
+        if export["component"] != component_id or export["type"] != "nxp.mcore.elf":
+            continue
+        try:
+            with Path(export["path"]).open("rb") as stream:
+                magic = stream.read(4)
+        except OSError as exc:
+            raise ToolError(f"cannot inspect M-core ELF output: {exc}") from exc
+        if magic != b"\x7fELF":
+            raise ToolError(f"M-core ELF output has invalid ELF magic: {export['path']}")
     before_inputs = _semantic_generic_snapshot(before)
     current_inputs = _semantic_generic_snapshot(current)
     for field in (
+        "kind",
+        "origin",
+        "import_contract",
         "sources",
         "configuration",
         "tools",
         "watched_inputs",
         "dependencies",
+        "artifact_inputs",
         "execution",
     ):
         if before_inputs[field] != current_inputs[field]:

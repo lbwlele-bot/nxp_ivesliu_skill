@@ -39,6 +39,39 @@
 `DEPENDENCIES.yaml` 只表达“哪些候选输入会进入最终 flashbin”；
 不推断 SoC recipe，也不替代当前软件栈和项目 `USAGE.md`。
 
+## 项目自治清单与旧路径边界
+
+当前已经把“上游项目怎么生产”和“flash.bin 本次消费什么”拆开：
+
+- `imx-oei/COMPILE_CHECKLIST.yaml` 是 OEI 单清单入口，成功后导出
+  `oei_ddr` artifact
+- `imx-atf/COMPILE_CHECKLIST.yaml` 导出 `bl31`
+- `uboot-imx/` 或 `real-time-edge-uboot/COMPILE_CHECKLIST.yaml` 分别导出
+  `uboot_bin` 和 `uboot_spl`
+- `imx-optee-os/COMPILE_CHECKLIST.yaml` 从 `tee-raw.bin` 发布 `tee`
+- `imx-sm/COMPILE_CHECKLIST.yaml` 按受控刷新顺序导出 `smfw`
+- `imx-mkimage/COMPILE_CHECKLIST.yaml` 是 mkimage 单清单入口，约束输入、
+  revision、recipe 和 `isolated_git`
+- imx-mkimage 通过同 case producer checklist + artifact 名消费这些输入
+
+新的实例路径是：
+
+```text
+records/compile/imx-oei/compile.yaml
+records/compile/imx-mkimage/compile.yaml
+```
+
+依赖方向是 `producer exports artifact -> imx-mkimage consumes artifact`，不是
+producer 依赖 flash.bin。
+
+`RECIPE_CONTRACTS.yaml` 当前只放行 `iMX94/iMX95` 的 `flash_a55`、`flash_all`，
+并约束必需 producer、artifact slot 和 mkimage 落位。
+`FIXED_ASSETS.yaml` 对本地已知 i.MX95 B0 LPDDR5 和 i.MX943 A0
+LPDDR4/LPDDR5 的 AHAB/DDR firmware 做 role、暂存名和 SHA-256 绑定。
+M payload 独立 producer 和 SCFW release-package producer 仍未完成迁移；旧
+`records/compile-manifest.yaml`、`DEPENDENCIES.yaml` 和本目录 policy 继续兼容，
+不能删除或当作已经废弃。
+
 正常进入方式：
 
 - 先由 `compile` 钉死：
@@ -144,7 +177,24 @@ make SOC=iMX95 REV=B0 OEI=YES LPDDR_TYPE=lpddr5 flash_all
   是否体现 `MIMX95(B0)`
 - `ATF` / `SMFW` 的 RTE patch bucket 归 `software_stacks/rte.md` 管
 - `SMFW` 的 RTE 配置要明确落到当前目标；已知候选是 `configs/other/mx95rte.cfg`
-- M 核 payload 是否带入，由当前 RTE 链路和 case 目标决定
+- M 核 payload 是否带入，由当前 RTE 链路和 case 目标决定；一旦 recipe
+  要求带入，必须先由 `m_freertos_sdk` 公共清单发布 `nxp.mcore.bin`
+
+## M producer 约束
+
+项目级 mkimage 清单不接受裸 M 文件。可信厂商默认 BIN 或用户已有 BIN 也要
+先经 `records/compile/m_freertos_sdk/compile.yaml` 的受控 import，形成来源、
+身份和输出哈希齐全的 producer 状态。
+
+当前 `RECIPE_CONTRACTS.yaml` 对含 M payload 的路径固定要求：
+
+- `iMX95/flash_all`：一个 `core_role=m7` 的 i.MX95 BIN；
+- `iMX94/flash_all`：分别一个 `core_role=m33s/m70/m71` 的 i.MX943 BIN。
+
+recipe contract 同时固定它们在隔离 mkimage 源码中的目标文件名。ELF 只保留给
+后续 Linux remoteproc consumer，不允许作为 flash.bin 输入。旧深度 manifest
+在不含 M payload 时继续兼容；凡含 M payload 都必须满足 producer 成功状态、
+当前文件哈希、SoC、core role 和 artifact type 检查。
 
 不要这样用：
 

@@ -15,7 +15,8 @@ relations:
     - rte
   release_packages: []
   boards: []
-  tools: []
+  tools:
+    - compile-tool
 
 case_required_for:
   - patched_uboot
@@ -26,6 +27,7 @@ warnings:
   - RTE tasks must not default to uboot-imx without checking whether real-time-edge-uboot is required.
   - U-Boot defconfig must be selected from SoC, board, package, DDR, boot media, and software stack.
   - U-Boot output alone is not a complete flash.bin.
+  - Real builds must use the project COMPILE_CHECKLIST.yaml and export separate U-Boot/SPL artifacts.
 
 evidence:
   - USAGE.md

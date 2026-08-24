@@ -1,0 +1,37 @@
+# OEI 项目编译清单模板。
+# AI 将本文件复制到当前 case 的
+# records/compile/imx-oei/compile.yaml，只填写 TBD 和本轮 intent。
+schema_version: 1
+kind: project_compile_checklist
+project: imx-oei
+
+case_root: TBD
+
+source:
+  ref: TBD
+
+parameters:
+  silicon_revision: TBD
+  board: TBD
+  oei_type: ddr
+
+inputs:
+  artifacts: []
+  files: []
+
+toolchain:
+  make: /usr/bin/make
+  compiler: toolchain/arm-gnu-toolchain-14.3.rel1-x86_64-arm-none-eabi/bin/arm-none-eabi-gcc
+
+intent:
+  action: rebuild
+  reason: TBD
+
+build:
+  mode: isolated_git
+
+outputs:
+  oei_ddr:
+    type: nxp.oei.ddr-image
+    collect_from: build/${parameters.board}/${parameters.oei_type}/oei-m33-ddr.bin
+    publish_to: artifacts/imx-oei/oei-m33-ddr.bin

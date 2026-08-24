@@ -3,6 +3,14 @@
 - 真实源码目录：`./uboot-imx/`
 - 最近观察 ref：`lf_v2025.04` / `lf-6.18.2-1.0.0`，使用前重新核对
 - 主要链路：通用 `U-Boot` / 启动固件输入
+- 对外编译清单：`COMPILE_CHECKLIST.yaml`
+
+## 受控单清单入口
+
+选定通用源码线以后，复制清单到
+`records/compile/uboot-imx/compile.yaml`，填写 ref、defconfig 和 intent。
+compile-tool 固定生成“配置 -> 构建”两步，在隔离源码内使用 `O=build`，并分别
+发布 `uboot_bin` 与 `uboot_spl`，供 mkimage 逐件消费。
 
 这是通用 NXP i.MX U-Boot 源码线。
 

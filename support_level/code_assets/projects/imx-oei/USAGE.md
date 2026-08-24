@@ -4,6 +4,9 @@
 - 最近观察分支（使用前重新核对）：`master`
 - 最近观察版本（使用前重新核对）：`lf-6.18.2-1.0.0`
 - 主要链路：`OEI` / `flash.bin` 上游输入
+- 对外编译清单：`COMPILE_CHECKLIST.yaml`
+- 内部编译 profile：`COMPILE_PROFILE.yaml`
+- 项目硬门禁：`COMPILE_POLICY.yaml`
 
 ## 角色
 
@@ -34,6 +37,23 @@ oei-m33-ddr.bin
 - 需要的 OEI 类型，例如 `ddr` 或 `tcm`
 - 最终是否作为 `flash.bin` 输入交给 `imx-mkimage`
 - `arm-none-eabi` 工具链位置
+
+## 项目级受控编译入口
+
+OEI 首先作为独立 producer 管理。把 `COMPILE_CHECKLIST.yaml` 复制到
+`records/compile/imx-oei/compile.yaml`，填写其中 TBD 后提交：
+
+```bash
+compile-tool prepare <case>/records/compile/imx-oei/compile.yaml
+compile-tool run <case>/records/compile/imx-oei/compile.yaml
+```
+
+清单命令必须显式传递同值 `R=<value> REV=<value>`、`board=` 和
+`oei=ddr`。compile-tool 自动使用指定 ARM 工具链、隔离源码副本，并发布
+`oei_ddr` artifact。
+
+旧 `records/compile-manifest.yaml` 中的 `oei` component 暂时继续兼容，供尚未
+迁移的完整 flashbin 链路使用。
 
 如果目标只是“重新打完整 `flash.bin`”，不要直接从这里开始；
 先回到 `compile_targets/flashbin/README.md` 判断完整输入集合。
@@ -107,6 +127,18 @@ build/mx95lp5/tcm/oei-m33-tcm.bin
 继续完成最终打包。
 
 不要把单独生成 `oei-m33-ddr.bin` 理解成 `flash.bin` 已经完成。
+
+项目级链路中，不手工用“文件存在”交接。imx-mkimage manifest 应引用：
+
+```yaml
+artifact_inputs:
+  oei_image:
+    slot: oei
+    manifest: /absolute/same-case/records/compile/imx-oei/manifest.yaml
+    artifact: oei_ddr
+```
+
+工具会核对 producer 成功状态、文件 SHA-256、artifact type 和 revision。
 
 ## 核对重点
 

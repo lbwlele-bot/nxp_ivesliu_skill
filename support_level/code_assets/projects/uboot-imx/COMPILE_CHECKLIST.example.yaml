@@ -1,0 +1,37 @@
+# 结构示例，不是已验证 case，也不应直接执行。
+schema_version: 1
+kind: project_compile_checklist
+project: uboot-imx
+
+case_root: /home/ives/桌面/NXP_v2/support_level/work/example-imx95-flashbin
+source:
+  ref: lf-6.18.2-1.0.0
+
+parameters:
+  defconfig: imx95_19x19_evk_defconfig
+  jobs: 8
+
+inputs:
+  artifacts: []
+  files: []
+
+toolchain:
+  make: /usr/bin/make
+  compiler: toolchain/arm-gnu-toolchain-14.3.rel1-x86_64-aarch64-none-linux-gnu/bin/aarch64-none-linux-gnu-gcc
+
+intent:
+  action: rebuild
+  reason: 为 i.MX95 EVK 生成 U-Boot 与 SPL 输入
+
+build:
+  mode: isolated_git
+
+outputs:
+  uboot_bin:
+    type: nxp.uboot.u-boot-bin
+    collect_from: build/u-boot.bin
+    publish_to: artifacts/uboot-imx/u-boot.bin
+  uboot_spl:
+    type: nxp.uboot.spl
+    collect_from: build/spl/u-boot-spl.bin
+    publish_to: artifacts/uboot-imx/u-boot-spl.bin

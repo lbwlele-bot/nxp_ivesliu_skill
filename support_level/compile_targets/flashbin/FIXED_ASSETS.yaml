@@ -1,0 +1,123 @@
+schema_version: 1
+kind: project_fixed_asset_matrix
+selectors: [soc, silicon_revision, lpddr_type, oei_enabled]
+
+# The path in provenance is human-readable evidence only. The case checklist may
+# use a copied file, but its bytes and mkimage staging name must match exactly.
+assets:
+  iMX95:
+    B0:
+      lpddr5:
+        'NO':
+          owned_slots: [ahab, firmware]
+          files:
+            ahab:
+              slot: ahab
+              stage_to: iMX95/mx95b0-ahab-container.img
+              sha256: 15e831a67e772a84db9b461f5ab143b005aa25c5a05ff39022bf6a9476b8e36a
+              provenance: firmware/imx95/firmware-ele-imx-2.0.3-286c884/mx95b0-ahab-container.img
+        'YES':
+          owned_slots: [ahab, firmware]
+          files:
+            ahab:
+              slot: ahab
+              stage_to: iMX95/mx95b0-ahab-container.img
+              sha256: 15e831a67e772a84db9b461f5ab143b005aa25c5a05ff39022bf6a9476b8e36a
+              provenance: firmware/imx95/firmware-ele-imx-2.0.3-286c884/mx95b0-ahab-container.img
+            lpddr_imem:
+              slot: firmware
+              stage_to: iMX95/lpddr5_imem_v202409.bin
+              sha256: 523777e3f4d765b94c90a6f6926e3d9399680026e12621786774e21136ff894e
+              provenance: firmware/imx95/firmware-imx-8.29-8741a3b/firmware/ddr/synopsys/lpddr5_imem_v202409.bin
+            lpddr_dmem:
+              slot: firmware
+              stage_to: iMX95/lpddr5_dmem_v202409.bin
+              sha256: 441b877ff80dd3780423181cd36b9bf47431062c74d346d33cdc9652d09eb6aa
+              provenance: firmware/imx95/firmware-imx-8.29-8741a3b/firmware/ddr/synopsys/lpddr5_dmem_v202409.bin
+            lpddr_imem_qb:
+              slot: firmware
+              stage_to: iMX95/lpddr5_imem_qb_v202409.bin
+              sha256: 3ee755834b26caf9b7e6d7d5456e35cabb9ed6629e34a6c91c72ff57589b8e69
+              provenance: firmware/imx95/firmware-imx-8.29-8741a3b/firmware/ddr/synopsys/lpddr5_imem_qb_v202409.bin
+            lpddr_dmem_qb:
+              slot: firmware
+              stage_to: iMX95/lpddr5_dmem_qb_v202409.bin
+              sha256: 59bfcd399e6fe4b1fdaf5bfa5182c7412d79f506c089c4ce420d96400321327f
+              provenance: firmware/imx95/firmware-imx-8.29-8741a3b/firmware/ddr/synopsys/lpddr5_dmem_qb_v202409.bin
+
+  iMX94:
+    A0:
+      lpddr5:
+        'NO':
+          owned_slots: [ahab, firmware]
+          files:
+            ahab:
+              slot: ahab
+              stage_to: iMX94/mx943a0-ahab-container.img
+              sha256: 52c9a6aa8de88858cfdd23d39849d6a2d57b6b90b2d52b22d5cbaba25c4290e1
+              provenance: firmware/imx943/firmware-ele-imx-2.0.3-286c884/mx943a0-ahab-container.img
+        'YES':
+          owned_slots: [ahab, firmware]
+          files:
+            ahab:
+              slot: ahab
+              stage_to: iMX94/mx943a0-ahab-container.img
+              sha256: 52c9a6aa8de88858cfdd23d39849d6a2d57b6b90b2d52b22d5cbaba25c4290e1
+              provenance: firmware/imx943/firmware-ele-imx-2.0.3-286c884/mx943a0-ahab-container.img
+            lpddr_imem:
+              slot: firmware
+              stage_to: iMX94/lpddr5_imem_v202409.bin
+              sha256: 523777e3f4d765b94c90a6f6926e3d9399680026e12621786774e21136ff894e
+              provenance: firmware/imx943/firmware-imx-8.29-8741a3b/firmware/ddr/synopsys/lpddr5_imem_v202409.bin
+            lpddr_dmem:
+              slot: firmware
+              stage_to: iMX94/lpddr5_dmem_v202409.bin
+              sha256: 441b877ff80dd3780423181cd36b9bf47431062c74d346d33cdc9652d09eb6aa
+              provenance: firmware/imx943/firmware-imx-8.29-8741a3b/firmware/ddr/synopsys/lpddr5_dmem_v202409.bin
+            lpddr_imem_qb:
+              slot: firmware
+              stage_to: iMX94/lpddr5_imem_qb_v202409.bin
+              sha256: 3ee755834b26caf9b7e6d7d5456e35cabb9ed6629e34a6c91c72ff57589b8e69
+              provenance: firmware/imx943/firmware-imx-8.29-8741a3b/firmware/ddr/synopsys/lpddr5_imem_qb_v202409.bin
+            lpddr_dmem_qb:
+              slot: firmware
+              stage_to: iMX94/lpddr5_dmem_qb_v202409.bin
+              sha256: 59bfcd399e6fe4b1fdaf5bfa5182c7412d79f506c089c4ce420d96400321327f
+              provenance: firmware/imx943/firmware-imx-8.29-8741a3b/firmware/ddr/synopsys/lpddr5_dmem_qb_v202409.bin
+      lpddr4:
+        'NO':
+          owned_slots: [ahab, firmware]
+          files:
+            ahab:
+              slot: ahab
+              stage_to: iMX94/mx943a0-ahab-container.img
+              sha256: 52c9a6aa8de88858cfdd23d39849d6a2d57b6b90b2d52b22d5cbaba25c4290e1
+              provenance: firmware/imx943/firmware-ele-imx-2.0.3-286c884/mx943a0-ahab-container.img
+        'YES':
+          owned_slots: [ahab, firmware]
+          files:
+            ahab:
+              slot: ahab
+              stage_to: iMX94/mx943a0-ahab-container.img
+              sha256: 52c9a6aa8de88858cfdd23d39849d6a2d57b6b90b2d52b22d5cbaba25c4290e1
+              provenance: firmware/imx943/firmware-ele-imx-2.0.3-286c884/mx943a0-ahab-container.img
+            lpddr_imem:
+              slot: firmware
+              stage_to: iMX94/lpddr4x_imem_v202409.bin
+              sha256: 8625bd4bdfaccdf773469a7f81d8ae270e7a7ec4a451cbf4b90f8bbc4dc2398a
+              provenance: firmware/imx943/firmware-imx-8.29-8741a3b/firmware/ddr/synopsys/lpddr4x_imem_v202409.bin
+            lpddr_dmem:
+              slot: firmware
+              stage_to: iMX94/lpddr4x_dmem_v202409.bin
+              sha256: 1e770d3f0f0d9fd7a4be7d8a9ba69db60a1239088f3f2ea38c1944564cb89d6b
+              provenance: firmware/imx943/firmware-imx-8.29-8741a3b/firmware/ddr/synopsys/lpddr4x_dmem_v202409.bin
+            lpddr_imem_qb:
+              slot: firmware
+              stage_to: iMX94/lpddr4x_imem_qb_v202409.bin
+              sha256: 93946e2ed414889c0ab47899c201833bc1807cb367e5e3130a11c0bc1f58edb5
+              provenance: firmware/imx943/firmware-imx-8.29-8741a3b/firmware/ddr/synopsys/lpddr4x_imem_qb_v202409.bin
+            lpddr_dmem_qb:
+              slot: firmware
+              stage_to: iMX94/lpddr4x_dmem_qb_v202409.bin
+              sha256: b9344aa7a64c7df6a537315dbbafc4dc4b84bb0a73fea7a798c059d7c1d236ac
+              provenance: firmware/imx943/firmware-imx-8.29-8741a3b/firmware/ddr/synopsys/lpddr4x_dmem_qb_v202409.bin

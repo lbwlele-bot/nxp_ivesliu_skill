@@ -4,6 +4,15 @@
 - 最近观察分支（使用前重新核对）：`lf_v2.12`
 - 最近观察版本（使用前重新核对）：`lf-6.18.2-1.0.0`
 - 主要链路：`启动固件`
+- 对外编译清单：`COMPILE_CHECKLIST.yaml`
+
+## 受控单清单入口
+
+复制 `COMPILE_CHECKLIST.yaml` 到
+`records/compile/imx-atf/compile.yaml`，只填写源码 ref、`platform`、`spd`
+和本轮 intent，然后执行 `compile-tool prepare -> run`。实际命令由 profile
+生成；`spd=none` 时省略 SPD assignment，`spd=opteed` 时显式生成
+`SPD=opteed`。构建统一位于 `isolated_git` 副本。
 
 ## 使用规则
 

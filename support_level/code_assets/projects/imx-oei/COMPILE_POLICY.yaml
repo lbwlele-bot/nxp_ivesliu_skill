@@ -1,0 +1,21 @@
+schema_version: 1
+target: imx-oei
+
+rules:
+  imx-oei-silicon-revision:
+    component: imx-oei
+    parameter: silicon_revision
+    resolution: must_ask_user
+    command:
+      executables: [make]
+      assignments: [REV]
+    reason: OEI may compile with its default revision but fail on the target silicon.
+
+command_rules: {}
+
+execution_rules:
+  imx-oei-isolated-source:
+    component: imx-oei
+    mode: isolated_git
+    source_kind: managed_git
+    reason: OEI generates build outputs in-tree, so checklist builds use a controlled isolated copy.

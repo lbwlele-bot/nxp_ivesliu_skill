@@ -1,0 +1,66 @@
+schema_version: 1
+id: imx-optee-os
+type: project_compile
+target: imx-optee-os
+component: imx-optee-os
+action: rebuild
+
+source:
+  id: imx-optee-os
+  path: imx-optee-os
+  case_path: sources/imx-optee-os
+  ref_kind: tag
+  remote: origin
+  remote_url: https://github.com/nxp-imx/imx-optee-os.git
+  update: if_missing
+
+parameters:
+  platform:
+    source: project
+    default: imx
+    allowed: [imx]
+  platform_flavor:
+    source: user
+    required: true
+    allowed: [mx943evk, mx95evk]
+  jobs:
+    source: project
+    default: 8
+    pattern: '^[1-9][0-9]*$'
+
+configuration_parameters: [platform, platform_flavor, jobs]
+
+tools:
+  - name: make
+    path: /usr/bin/make
+    version_args: [--version]
+  - name: compiler32
+    path: toolchain/arm-gnu-toolchain-14.3.rel1-x86_64-arm-none-eabi/bin/arm-none-eabi-gcc
+    version_args: [--version]
+  - name: compiler64
+    path: toolchain/arm-gnu-toolchain-14.3.rel1-x86_64-aarch64-none-linux-gnu/bin/aarch64-none-linux-gnu-gcc
+    version_args: [--version]
+
+watched_inputs: []
+
+outputs:
+  tee:
+    type: nxp.optee.image
+    path: artifacts/imx-optee-os/tee.bin
+    identity_parameters: [platform, platform_flavor]
+
+artifact_inputs: {}
+file_inputs: {}
+
+checklist_build:
+  mode: isolated_git
+  env: {}
+  steps:
+    - name: build-imx-optee-os
+      command:
+        - ${tools.make}
+        - PLATFORM=${parameters.platform}
+        - PLATFORM_FLAVOR=${parameters.platform_flavor}
+        - CROSS_COMPILE=${tool_prefix.compiler32}
+        - CROSS_COMPILE64=${tool_prefix.compiler64}
+        - -j${parameters.jobs}

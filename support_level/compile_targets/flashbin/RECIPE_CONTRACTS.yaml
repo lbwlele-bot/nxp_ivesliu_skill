@@ -1,0 +1,100 @@
+schema_version: 1
+kind: project_input_matrix
+selectors: [soc, recipe]
+
+recipes:
+  iMX95:
+    flash_a55:
+      artifacts:
+        atf:
+          slot: atf
+          stage_to: iMX95/bl31.bin
+          required: true
+          producer_parameters:
+            platform: imx95
+        uboot_bin:
+          slot: uboot_bin
+          stage_to: iMX95/u-boot.bin
+          required: true
+        uboot_spl:
+          slot: uboot_spl
+          stage_to: iMX95/u-boot-spl.bin
+          required: true
+        smfw:
+          slot: smfw
+          stage_to: iMX95/m33_image.bin
+          required: true
+        optee:
+          slot: optee
+          stage_to: iMX95/tee.bin
+          required: false
+          producer_parameters:
+            platform_flavor: mx95evk
+        oei:
+          slot: oei
+          stage_to: iMX95/oei-m33-ddr.bin
+          required_when: {parameter: oei_enabled, equals: 'YES'}
+      files:
+        ahab:
+          slot: ahab
+          stage_pattern: '^iMX95/mx95[a-z0-9]+-ahab-container[.]img$'
+          required: true
+      extra_file_slots:
+        firmware:
+          stage_prefix: iMX95/
+          minimum_when: {parameter: oei_enabled, equals: 'YES', count: 4}
+      relations:
+        - when_artifact: optee
+          require_artifact: atf
+          producer_parameter: spd
+          equals: opteed
+
+    flash_all:
+      artifacts:
+        atf: {slot: atf, stage_to: iMX95/bl31.bin, required: true, producer_parameters: {platform: imx95}}
+        uboot_bin: {slot: uboot_bin, stage_to: iMX95/u-boot.bin, required: true}
+        uboot_spl: {slot: uboot_spl, stage_to: iMX95/u-boot-spl.bin, required: true}
+        smfw: {slot: smfw, stage_to: iMX95/m33_image.bin, required: true}
+        optee: {slot: optee, stage_to: iMX95/tee.bin, required: false, producer_parameters: {platform_flavor: mx95evk}}
+        oei: {slot: oei, stage_to: iMX95/oei-m33-ddr.bin, required_when: {parameter: oei_enabled, equals: 'YES'}}
+        m7: {slot: m_payload, stage_to: iMX95/m7_image.bin, required: true, producer_parameters: {soc: imx95, core_role: m7}}
+      files:
+        ahab: {slot: ahab, stage_pattern: '^iMX95/mx95[a-z0-9]+-ahab-container[.]img$', required: true}
+      extra_file_slots:
+        firmware: {stage_prefix: iMX95/, minimum_when: {parameter: oei_enabled, equals: 'YES', count: 4}}
+      relations:
+        - {when_artifact: optee, require_artifact: atf, producer_parameter: spd, equals: opteed}
+
+  iMX94:
+    flash_a55:
+      artifacts:
+        atf: {slot: atf, stage_to: iMX94/bl31.bin, required: true, producer_parameters: {platform: imx94}}
+        uboot_bin: {slot: uboot_bin, stage_to: iMX94/u-boot.bin, required: true}
+        uboot_spl: {slot: uboot_spl, stage_to: iMX94/u-boot-spl.bin, required: true}
+        smfw: {slot: smfw, stage_to: iMX94/m33_image.bin, required: true}
+        optee: {slot: optee, stage_to: iMX94/tee.bin, required: false, producer_parameters: {platform_flavor: mx943evk}}
+        oei: {slot: oei, stage_to: iMX94/oei-m33-ddr.bin, required_when: {parameter: oei_enabled, equals: 'YES'}}
+      files:
+        ahab: {slot: ahab, stage_pattern: '^iMX94/mx943[a-z0-9]+-ahab-container[.]img$', required: true}
+      extra_file_slots:
+        firmware: {stage_prefix: iMX94/, minimum_when: {parameter: oei_enabled, equals: 'YES', count: 4}}
+      relations:
+        - {when_artifact: optee, require_artifact: atf, producer_parameter: spd, equals: opteed}
+
+    flash_all:
+      artifacts:
+        atf: {slot: atf, stage_to: iMX94/bl31.bin, required: true, producer_parameters: {platform: imx94}}
+        uboot_bin: {slot: uboot_bin, stage_to: iMX94/u-boot.bin, required: true}
+        uboot_spl: {slot: uboot_spl, stage_to: iMX94/u-boot-spl.bin, required: true}
+        smfw: {slot: smfw, stage_to: iMX94/m33_image.bin, required: true}
+        optee: {slot: optee, stage_to: iMX94/tee.bin, required: false, producer_parameters: {platform_flavor: mx943evk}}
+        oei: {slot: oei, stage_to: iMX94/oei-m33-ddr.bin, required_when: {parameter: oei_enabled, equals: 'YES'}}
+        m33s: {slot: m_payload, stage_to: iMX94/m33s_image.bin, required: true, producer_parameters: {soc: imx943, core_role: m33s}}
+        m70: {slot: m_payload, stage_to: iMX94/m70_image.bin, required: true, producer_parameters: {soc: imx943, core_role: m70}}
+        m71: {slot: m_payload, stage_to: iMX94/m71_image.bin, required: true, producer_parameters: {soc: imx943, core_role: m71}}
+      files:
+        ahab: {slot: ahab, stage_pattern: '^iMX94/mx943[a-z0-9]+-ahab-container[.]img$', required: true}
+      extra_file_slots:
+        firmware: {stage_prefix: iMX94/, minimum_when: {parameter: oei_enabled, equals: 'YES', count: 4}}
+      relations:
+        - {when_artifact: optee, require_artifact: atf, producer_parameter: spd, equals: opteed}
