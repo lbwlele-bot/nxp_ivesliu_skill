@@ -219,6 +219,81 @@ class GenericFixture:
 
 
 class GenericStateTests(unittest.TestCase):
+    def test_linux_build_output_is_logged_instead_of_streamed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            fixture = GenericFixture(Path(temp_dir), target="linux")
+            fixture.manifest_data["components"] = {
+                "image": fixture.component("image")
+            }
+            fixture.write_manifest()
+            assessment = assess(fixture.manifest())
+            command = (
+                "printf 'kernel-progress-line\\n' && "
+                f"printf image-output > {fixture.outputs['image']}"
+            )
+
+            result = fixture.run(assessment, {"image": command})
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertNotIn("kernel-progress-line\n", result.stdout)
+            self.assertNotIn("kernel-progress-line\n", result.stderr)
+            self.assertIn("Linux build completed successfully", result.stdout)
+            logs = list(
+                (fixture.case_root / "logs" / "compile" / "linux").glob(
+                    "build-*.log"
+                )
+            )
+            self.assertEqual(len(logs), 1)
+            self.assertIn("kernel-progress-line", logs[0].read_text())
+
+    def test_linux_failure_returns_bounded_summary_after_process_exit(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            fixture = GenericFixture(Path(temp_dir), target="linux")
+            fixture.manifest_data["components"] = {
+                "image": fixture.component("image")
+            }
+            fixture.write_manifest()
+            assessment = assess(fixture.manifest())
+            command = (
+                "printf 'kernel-progress-line\\n' && "
+                "printf 'drivers/test.c:12: error: broken build\\n' >&2; "
+                "exit 7"
+            )
+
+            result = fixture.run(assessment, {"image": command})
+
+            self.assertEqual(result.returncode, 7)
+            self.assertNotIn("kernel-progress-line\n", result.stdout)
+            self.assertIn("first detected build error", result.stderr)
+            self.assertIn("error: broken build", result.stderr)
+            self.assertIn("full Linux build log", result.stderr)
+            logs = list(
+                (fixture.case_root / "logs" / "compile" / "linux").glob(
+                    "build-*.log"
+                )
+            )
+            self.assertEqual(len(logs), 1)
+            self.assertIn("kernel-progress-line", logs[0].read_text())
+
+    def test_non_linux_build_output_remains_streamed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            fixture = GenericFixture(Path(temp_dir), target="zephyr")
+            fixture.manifest_data["components"] = {
+                "image": fixture.component("image")
+            }
+            fixture.write_manifest()
+            assessment = assess(fixture.manifest())
+            command = (
+                "printf 'zephyr-progress-line\\n' && "
+                f"printf image-output > {fixture.outputs['image']}"
+            )
+
+            result = fixture.run(assessment, {"image": command})
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("\nzephyr-progress-line\n", result.stdout)
+            self.assertFalse((fixture.case_root / "logs" / "compile").exists())
+
     def test_managed_git_build_cwd_requires_external_or_isolated_boundary(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             fixture = GenericFixture(Path(temp_dir), target="custom-os")

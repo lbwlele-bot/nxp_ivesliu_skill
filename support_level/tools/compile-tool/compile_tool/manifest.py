@@ -515,8 +515,10 @@ def _normalize_source_v2(
         )
         case_path = resolve_absolute(raw.get("case_path"), f"{label}.case_path")
         require_within(case_path, case_root, f"{label}.case_path")
-        if archive_path == case_path or is_within(archive_path, case_root):
-            raise ToolError(f"{label}.archive_path must be outside the case")
+        if archive_path == case_path or is_within(archive_path, case_path):
+            raise ToolError(
+                f"{label}.archive_path must not be inside its extraction directory"
+            )
         return {
             "kind": kind,
             "archive_path": str(archive_path),

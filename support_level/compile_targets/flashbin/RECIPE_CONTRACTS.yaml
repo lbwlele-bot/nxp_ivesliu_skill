@@ -57,7 +57,6 @@ recipes:
         smfw: {slot: smfw, stage_to: iMX95/m33_image.bin, required: true}
         optee: {slot: optee, stage_to: iMX95/tee.bin, required: false, producer_parameters: {platform_flavor: mx95evk}}
         oei: {slot: oei, stage_to: iMX95/oei-m33-ddr.bin, required_when: {parameter: oei_enabled, equals: 'YES'}}
-        m7: {slot: m_payload, stage_to: iMX95/m7_image.bin, required: true, producer_parameters: {soc: imx95, core_role: m7}}
       files:
         ahab: {slot: ahab, stage_pattern: '^iMX95/mx95[a-z0-9]+-ahab-container[.]img$', required: true}
       extra_file_slots:
@@ -89,9 +88,6 @@ recipes:
         smfw: {slot: smfw, stage_to: iMX94/m33_image.bin, required: true}
         optee: {slot: optee, stage_to: iMX94/tee.bin, required: false, producer_parameters: {platform_flavor: mx943evk}}
         oei: {slot: oei, stage_to: iMX94/oei-m33-ddr.bin, required_when: {parameter: oei_enabled, equals: 'YES'}}
-        m33s: {slot: m_payload, stage_to: iMX94/m33s_image.bin, required: true, producer_parameters: {soc: imx943, core_role: m33s}}
-        m70: {slot: m_payload, stage_to: iMX94/m70_image.bin, required: true, producer_parameters: {soc: imx943, core_role: m70}}
-        m71: {slot: m_payload, stage_to: iMX94/m71_image.bin, required: true, producer_parameters: {soc: imx943, core_role: m71}}
       files:
         ahab: {slot: ahab, stage_pattern: '^iMX94/mx943[a-z0-9]+-ahab-container[.]img$', required: true}
       extra_file_slots:

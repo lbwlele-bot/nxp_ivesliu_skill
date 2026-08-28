@@ -119,6 +119,15 @@ input_contract:
   path: compile_targets/flashbin/RECIPE_CONTRACTS.yaml
   selectors: [soc, recipe]
 
+# soc.mak 是 recipe 依赖和目标文件名的事实源。这里仅声明如何把其中的
+# M payload 绑定到具名 producer；不复制每个 recipe 的 M 镜像列表。
+make_recipe_inputs:
+  soc_parameter: soc
+  recipe_parameter: recipe
+  m_payload_slot: m_payload
+  soc_identity_overrides:
+    iMX94: imx943
+
 fixed_asset_contract:
   path: compile_targets/flashbin/FIXED_ASSETS.yaml
   selectors: [soc, silicon_revision, lpddr_type, oei_enabled]

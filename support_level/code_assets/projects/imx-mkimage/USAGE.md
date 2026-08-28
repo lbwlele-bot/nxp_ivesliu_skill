@@ -58,8 +58,13 @@ revision、SOC、recipe、producer/fixed input 选择和本轮 intent 后，
 `oei_enabled=YES` 时必须选择 `oei` artifact，并和 consumer 的 silicon
 revision 一致。
 
-`compile_targets/flashbin/RECIPE_CONTRACTS.yaml` 进一步约束当前
-`SOC + recipe` 的必需角色与 `stage_to`。当前只覆盖 `iMX94/iMX95` 的
+`soc.mak` 是 recipe 依赖和 M 镜像文件名的事实源。compile-tool 从清单选择的
+源码 ref 读取 `<SOC>/soc.mak`，自动提取当前 target 实际需要的 M payload，
+不把 `m7/m33s/m70/m71` 列表复制到额外 YAML，也不让 AI 阅读 Makefile 全文。
+
+`compile_targets/flashbin/RECIPE_CONTRACTS.yaml` 只补充 `soc.mak` 没有表达的
+producer 类型、身份关系和当前非 M 输入合同。当前完整 producer/fixed-input
+组合仍只覆盖 `iMX94/iMX95` 的
 `flash_a55` 和 `flash_all`；未登记 recipe 不会静默执行。
 
 `COMPILE_POLICY.yaml` 独立要求 make 命令显式传 `REV=<value>`，并强制所有
@@ -99,11 +104,13 @@ OEI、ATF、两条 U-Boot、OP-TEE 和 SMFW 已有独立单清单。
 验证 producer 成功状态、hash、type 和身份参数。它不会自动跨 manifest 执行
 producer；应先完成 producer，再 assess imx-mkimage。
 
-当前 recipe contract 强制：
+当前 `soc.mak + producer identity` 联合约束：
 
-- `iMX95/flash_all` 消费 `soc=imx95, core_role=m7`，固定暂存为
+- `iMX95/flash_all` 从 `soc.mak` 得到 `m7_image.bin`，对应 producer 必须是
+  `soc=imx95, core_role=m7`，固定暂存为
   `iMX95/m7_image.bin`；
-- `iMX94/flash_all` 分别消费 `soc=imx943, core_role=m33s/m70/m71`，固定暂存为
+- `iMX94/flash_all` 从 `soc.mak` 得到 `m33s/m70/m71` 三个文件，对应 producer
+  必须是 `soc=imx943, core_role=m33s/m70/m71`，固定暂存为
   `iMX94/m33s_image.bin`、`m70_image.bin`、`m71_image.bin`；
 - producer 文件缺失、哈希变化、SoC/core role/type 错误或传入 ELF 都会阻断。
 

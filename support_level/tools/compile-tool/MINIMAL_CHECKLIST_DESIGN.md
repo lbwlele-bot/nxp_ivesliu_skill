@@ -72,13 +72,15 @@ mkimage 已把 OEI、ATF、U-Boot、OP-TEE 和 SMFW 当作独立 producer。工�
 - `SOC`、`REV`、`OEI`、`LPDDR_TYPE` 和 recipe 与清单一致
 - 所有选中输入都存在，并由工具记录 SHA-256
 - artifact 来自同 case producer 的成功状态，类型、hash 和身份匹配
-- `SOC + recipe` 命中 recipe contract，必需角色、slot 和 `stage_to` 完全匹配
+- `SOC + recipe` 命中 recipe contract；M 镜像集合和 `stage_to` 从选定源码
+  ref 的 `soc.mak` 得出，其余必需角色和 slot 由 contract 补充
 - `oei_enabled=YES` 时必须引用同 case 成功的 `oei_ddr`
 - OEI 和 mkimage 的 silicon revision 必须一致
 - `oei_enabled=NO` 时不能选择 OEI artifact
-- `flash_all` 必须选择对应 SoC 的 M payload 角色；`flash_a55` 不允许混入这些角色
-- 每个 M payload 必须是 M SDK producer 的 `nxp.mcore.bin`；i.MX95 固定 m7，
-  i.MX94 固定 m33s/m70/m71，不能使用裸文件或 ELF
+- 当前 recipe 必须选择 `soc.mak` 实际依赖的 M payload；不依赖 M 镜像的
+  recipe 不允许混入这些角色
+- 每个 M payload 必须是 M SDK producer 的 `nxp.mcore.bin`，SoC/core role
+  由文件身份匹配，不能使用裸文件或 ELF
 - mkimage 构建只能在 compile-tool 管理的 `isolated_git` 副本内执行
 - OEI 成功状态或任一固定输入变化时，mkimage 需要 repack
 

@@ -12,8 +12,161 @@ from .common import (
     mapping_value,
     normalize_hash,
     reject_unknown_keys,
+    run_command,
     text_value,
 )
+
+
+MAKE_ASSIGNMENT_RE = re.compile(
+    r"^([A-Za-z_][A-Za-z0-9_]*)\s*(?:[?:+]?=)\s*(.*?)\s*$"
+)
+MAKE_TARGET_RE = re.compile(r"^([A-Za-z0-9_.-]+)\s*:\s*(.*?)\s*$")
+MAKE_VARIABLE_RE = re.compile(r"\$\(([A-Za-z_][A-Za-z0-9_]*)\)")
+M_IMAGE_RE = re.compile(r"^m(?:4(?:_[0-9]+)?|7[0-9]?|33s?)_image[.]bin$", re.IGNORECASE)
+
+
+def _logical_make_lines(text: str) -> list[str]:
+    result: list[str] = []
+    pending = ""
+    for raw in text.splitlines():
+        if raw.startswith("\t"):
+            continue
+        line = raw.split("#", 1)[0].rstrip()
+        if not line and not pending:
+            continue
+        if line.endswith("\\"):
+            pending += line[:-1] + " "
+            continue
+        result.append((pending + line).strip())
+        pending = ""
+    if pending.strip():
+        result.append(pending.strip())
+    return result
+
+
+def _expand_make_variables(value: str, variables: dict[str, str]) -> str:
+    result = value
+    for _ in range(32):
+        expanded = MAKE_VARIABLE_RE.sub(
+            lambda match: variables.get(match.group(1), match.group(0)), result
+        )
+        if expanded == result:
+            return result
+        result = expanded
+    raise ToolError("soc.mak variable expansion is recursive")
+
+
+def make_recipe_m_images(text: str, recipe: str) -> list[str]:
+    """Return M image prerequisites from a make target without running Make."""
+    variables: dict[str, str] = {}
+    targets: dict[str, list[str]] = {}
+    for line in _logical_make_lines(text):
+        assignment = MAKE_ASSIGNMENT_RE.fullmatch(line)
+        if assignment:
+            variables[assignment.group(1)] = assignment.group(2)
+            continue
+        target = MAKE_TARGET_RE.fullmatch(line)
+        if target:
+            targets[target.group(1)] = target.group(2).split()
+    if recipe not in targets:
+        raise ToolError(f"soc.mak does not define recipe target: {recipe}")
+
+    images: set[str] = set()
+    visited: set[str] = set()
+
+    def walk(target: str) -> None:
+        if target in visited:
+            return
+        visited.add(target)
+        for raw_dependency in targets.get(target, []):
+            dependency = _expand_make_variables(raw_dependency, variables)
+            if dependency in targets:
+                walk(dependency)
+                continue
+            name = Path(dependency).name
+            if M_IMAGE_RE.fullmatch(name):
+                images.add(name)
+
+    walk(recipe)
+    return sorted(images)
+
+
+def _soc_makefile_at_ref(source_root: Path, source_ref: str, soc: str) -> tuple[str, str]:
+    relative = f"{soc}/soc.mak"
+    if (source_root / ".git").exists():
+        result = run_command(
+            ["git", "-C", str(source_root), "show", f"{source_ref}:{relative}"],
+            cwd=source_root,
+        )
+        text = result.stdout.decode("utf-8", errors="replace")
+    else:
+        path = source_root / relative
+        if not path.is_file():
+            raise ToolError(f"mkimage recipe source is unavailable: {path}")
+        text = path.read_text(encoding="utf-8")
+    return relative, text
+
+
+def validate_make_recipe_m_payloads(
+    contract: dict[str, Any] | None,
+    *,
+    source_root: Path,
+    source_ref: str,
+    parameters: dict[str, str],
+    inputs: dict[str, Any],
+) -> dict[str, Any] | None:
+    if contract is None:
+        return None
+    soc = parameters[contract["soc_parameter"]]
+    recipe = parameters[contract["recipe_parameter"]]
+    relative, text = _soc_makefile_at_ref(source_root, source_ref, soc)
+    candidates = make_recipe_m_images(text, recipe)
+    slot = contract["m_payload_slot"]
+    claimed_elsewhere = {
+        Path(entry["stage_to"]).name
+        for entry in [*inputs["artifacts"], *inputs["files"]]
+        if entry["slot"] != slot
+    }
+    required_files = [name for name in candidates if name not in claimed_elsewhere]
+    required_destinations = {f"{soc}/{name}": name for name in required_files}
+    selected = {
+        entry["stage_to"]: entry
+        for entry in inputs["artifacts"]
+        if entry["slot"] == slot
+    }
+    missing = sorted(set(required_destinations) - set(selected))
+    extra = sorted(set(selected) - set(required_destinations))
+    if missing:
+        raise ToolError(
+            f"soc.mak recipe {soc}/{recipe} requires M payloads: "
+            + ", ".join(missing)
+        )
+    if extra:
+        raise ToolError(
+            f"soc.mak recipe {soc}/{recipe} does not consume M payloads: "
+            + ", ".join(extra)
+        )
+    expected_soc = contract["soc_identity_overrides"].get(soc, soc.casefold())
+    identities: dict[str, dict[str, str]] = {}
+    for destination, filename in required_destinations.items():
+        role = filename.removesuffix("_image.bin").casefold()
+        entry = selected[destination]
+        actual = _producer_parameters(entry, f"soc.mak M payload {destination}")
+        for name, expected in {"soc": expected_soc, "core_role": role}.items():
+            if actual.get(name, "").casefold() != expected.casefold():
+                raise ToolError(
+                    f"soc.mak M payload {destination} requires producer parameter "
+                    f"{name}={expected}"
+                )
+        identities[destination] = {"soc": expected_soc, "core_role": role}
+    return {
+        "source": relative,
+        "source_hash": hash_data(text),
+        "soc": soc,
+        "recipe": recipe,
+        "required_m_payloads": required_destinations,
+        "identities": identities,
+    }
 
 
 def _condition_matches(raw_value: Any, parameters: dict[str, str], label: str) -> bool:
@@ -138,6 +291,8 @@ def validate_input_contract(
     contract_reference: dict[str, Any] | None,
     parameters: dict[str, str],
     inputs: dict[str, Any],
+    *,
+    dynamic_artifact_slots: set[str] | None = None,
 ) -> None:
     if contract_reference is None:
         return
@@ -173,7 +328,12 @@ def validate_input_contract(
     files = _selected_by_name(inputs["files"], "file inputs")
     artifact_roles = mapping_value(contract.get("artifacts") or {}, "contract artifacts")
     file_roles = mapping_value(contract.get("files") or {}, "contract files")
-    unknown_artifacts = sorted(set(artifacts) - set(artifact_roles))
+    dynamic_slots = dynamic_artifact_slots or set()
+    unknown_artifacts = sorted(
+        name
+        for name, entry in artifacts.items()
+        if name not in artifact_roles and entry["slot"] not in dynamic_slots
+    )
     if unknown_artifacts:
         raise ToolError(
             "input contract has unknown artifact roles: " + ", ".join(unknown_artifacts)

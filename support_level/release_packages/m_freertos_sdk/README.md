@@ -65,9 +65,11 @@
 
 ## 包登记和导入边界
 
-`PACKAGES.yaml` 当前登记本目录已有的九个 SDK 压缩包。compile-tool 在接受
-M SDK 清单前校验登记 SHA-256；未登记包、包内容变化或版本与目录结构冲突
-都会阻断，不能按相近文件名猜版本。
+`PACKAGES.yaml` 当前记录本目录已知的九个 SDK 压缩包及增强验证信息。它不是
+唯一准入名单：compile-tool 只检查本轮选中的包；未登记的新包必须由用户提供到
+当前 case，并在公开清单中填写路径、SDK release 和信任理由。工具记录实际
+SHA-256 为本次软件身份，但只把与已知目录哈希一致的包标为
+`catalog_verified`。版本与目录结构冲突仍会阻断，不能按相近文件名猜版本。
 
 厂商预编译镜像通过 `prebuilt_import/vendor_package` 选择压缩包内的精确成员，
 状态记录为 `catalog_verified`。用户自己提供的文件不进入本目录，必须先放入

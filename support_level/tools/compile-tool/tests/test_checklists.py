@@ -380,6 +380,23 @@ class ChecklistWorkflowTests(unittest.TestCase):
 
 
 class RealProjectChecklistContractTests(unittest.TestCase):
+    def test_soc_mak_parser_discovers_m_payloads_beyond_imx94_imx95(self) -> None:
+        source = profiles.PROJECTS_ROOT / "imx-mkimage" / "imx-mkimage"
+        cases = {
+            ("iMX94", "flash_all"): [
+                "m33_image.bin",
+                "m33s_image.bin",
+                "m70_image.bin",
+                "m71_image.bin",
+            ],
+            ("iMX95", "flash_all"): ["m33_image.bin", "m7_image.bin"],
+            ("iMX8DXL", "flash_linux_m4"): ["m4_image.bin"],
+            ("iMX8QM", "flash_linux_m4"): ["m4_1_image.bin", "m4_image.bin"],
+        }
+        for (soc, recipe), expected in cases.items():
+            text = (source / soc / "soc.mak").read_text(encoding="utf-8")
+            self.assertEqual(composition.make_recipe_m_images(text, recipe), expected)
+
     def _prepare(
         self,
         case_root: Path,
@@ -580,7 +597,13 @@ class RealProjectChecklistContractTests(unittest.TestCase):
                 ],
             }
             write_yaml(path, data)
-            self.assertEqual(checklists.normalize_checklist(path)["project"], "imx-mkimage")
+            normalized = checklists.normalize_checklist(path)
+            self.assertEqual(normalized["project"], "imx-mkimage")
+            self.assertEqual(normalized["make_recipe"]["source"], "iMX95/soc.mak")
+            self.assertEqual(
+                list(normalized["make_recipe"]["required_m_payloads"].values()),
+                [],
+            )
 
             optee = self._producer_stub(
                 case_root,
@@ -666,7 +689,26 @@ class RealProjectChecklistContractTests(unittest.TestCase):
                 ],
             }
             write_yaml(path, data)
-            self.assertEqual(checklists.normalize_checklist(path)["project"], "imx-mkimage")
+            normalized = checklists.normalize_checklist(path)
+            self.assertEqual(normalized["project"], "imx-mkimage")
+            self.assertEqual(normalized["make_recipe"]["source"], "iMX95/soc.mak")
+            self.assertEqual(
+                list(normalized["make_recipe"]["required_m_payloads"].values()),
+                ["m7_image.bin"],
+            )
+
+            without_m = yaml.safe_load(path.read_text(encoding="utf-8"))
+            without_m["inputs"]["artifacts"] = [
+                entry
+                for entry in without_m["inputs"]["artifacts"]
+                if entry["slot"] != "m_payload"
+            ]
+            write_yaml(path, without_m)
+            with self.assertRaisesRegex(
+                ToolError, "soc.mak recipe iMX95/flash_all requires M payloads"
+            ):
+                checklists.normalize_checklist(path)
+            write_yaml(path, data)
 
             m_data = yaml.safe_load(m_sdk.read_text(encoding="utf-8"))
             m_data["jobs"]["m7"]["core_role"] = "m70"

@@ -37,6 +37,12 @@ LLM 再决定本轮要重编哪个 component，并在 request 中声明 scope �
 工具阻止 scope 外组件和未声明的全量 clean。源码或配置变化后，
 文件级增量继续完全交给 Kbuild，compile-tool 不解析 Kbuild。
 
+Linux 是当前唯一启用长构建日志策略的 compile target。
+`run` 将原始 stdout/stderr 写入
+`logs/compile/linux/build-<time>-<pid>.log`，以进程退出和退出码判定结束。
+成功只返回耗时与日志位置；失败才返回受限的错误摘要。
+该策略不传播到 Zephyr、A55 RTOS、flashbin 或 M SDK。
+
 与 `flashbin` 的关系：
 
 - 如果只是改 kernel / dtb / modules，

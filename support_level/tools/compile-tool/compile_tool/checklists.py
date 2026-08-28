@@ -18,7 +18,11 @@ from .common import (
     require_within,
     text_value,
 )
-from .composition import validate_fixed_asset_contract, validate_input_contract
+from .composition import (
+    validate_fixed_asset_contract,
+    validate_input_contract,
+    validate_make_recipe_m_payloads,
+)
 from .fingerprints import file_snapshots, toolchain_snapshots
 from .guards import SAFE_ID_RE, UNRESOLVED_VALUES
 from .manifest import load_manifest
@@ -260,7 +264,24 @@ def normalize_checklist(path: Path) -> dict[str, Any]:
     if reason.casefold() == "tbd":
         raise ToolError("checklist.intent.reason must be resolved")
     inputs = _normalize_inputs(raw.get("inputs"), case_root, profile)
-    validate_input_contract(profile["input_contract"], parameters, inputs)
+    make_recipe_contract = profile.get("make_recipe_inputs")
+    validate_input_contract(
+        profile["input_contract"],
+        parameters,
+        inputs,
+        dynamic_artifact_slots=(
+            {make_recipe_contract["m_payload_slot"]}
+            if make_recipe_contract is not None
+            else set()
+        ),
+    )
+    make_recipe = validate_make_recipe_m_payloads(
+        make_recipe_contract,
+        source_root=Path(profile["source"]["canonical_path"]),
+        source_ref=ref,
+        parameters=parameters,
+        inputs=inputs,
+    )
     validate_fixed_asset_contract(
         profile["fixed_asset_contract"], parameters, inputs
     )
@@ -278,6 +299,7 @@ def normalize_checklist(path: Path) -> dict[str, Any]:
         "inputs": inputs,
         "outputs": raw["outputs"],
         "profile": profile,
+        "make_recipe": make_recipe,
     }
 
 
@@ -357,6 +379,14 @@ def materialize_checklist_manifest(
             f"compile_checklist.artifact_input.{entry['name']}.stage_to"
         ] = entry["stage_to"]
     raw["artifact_inputs"] = artifact_inputs
+    if checklist.get("make_recipe") is not None:
+        recipe = checklist["make_recipe"]
+        configuration = raw["components"][checklist["project"]]["configuration"]["values"]
+        configuration["compile_checklist.make_recipe.source"] = recipe["source"]
+        configuration["compile_checklist.make_recipe.source_hash"] = recipe["source_hash"]
+        configuration["compile_checklist.make_recipe.required_m_payloads"] = ",".join(
+            recipe["required_m_payloads"]
+        )
     _write_generated_manifest(manifest_path, raw, checklist)
     return load_manifest(manifest_path)
 
@@ -559,6 +589,16 @@ def _render_checklist_plan(
     ]
     for name, value in checklist["parameters"].items():
         lines.append(f"- {name}：{value}")
+    if checklist.get("make_recipe") is not None:
+        recipe = checklist["make_recipe"]
+        payloads = ", ".join(recipe["required_m_payloads"].values()) or "无"
+        lines.extend(
+            [
+                "",
+                f"Recipe 事实源：{recipe['source']}",
+                f"M payload：{payloads}",
+            ]
+        )
     lines.extend(
         [
             "",

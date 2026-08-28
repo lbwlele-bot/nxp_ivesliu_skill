@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+from collections import deque
+from datetime import datetime
 import os
 from pathlib import Path
+import re
 import shlex
 import subprocess
 import sys
-from typing import Any
+import time
+from typing import Any, BinaryIO
 
 from .common import (
     ENV_NAME_RE,
@@ -441,6 +445,15 @@ def _render_step(lines: list[str], index: str, step: dict[str, Any]) -> None:
     lines.append(f"   $ {step['command']}")
 
 
+def _linux_log_dir(manifest: dict[str, Any]) -> Path:
+    case_root = Path(manifest["case_root"]).resolve()
+    log_dir = (case_root / "logs" / "compile" / "linux").resolve(
+        strict=False
+    )
+    require_within(log_dir, case_root, "Linux build log directory")
+    return log_dir
+
+
 def render_report(
     request: dict[str, Any],
     assessment: dict[str, Any] | None = None,
@@ -493,11 +506,24 @@ def render_report(
             lines.extend(["", "显式 destructive 理由："])
             for component, reason in request["decision"]["destructive"].items():
                 lines.append(f"- {component}：{reason}")
+        if request["_manifest"]["target"] == "linux":
+            lines.extend(
+                [
+                    "",
+                    "Linux 长构建输出策略：",
+                    "- stdout/stderr 完整落盘，不流式回传给 AI",
+                    "- 以编译进程退出和退出码判定结束",
+                    f"- 日志目录：{_linux_log_dir(request['_manifest'])}",
+                    "- 失败时仅回传首个错误和有限尾部摘要",
+                ]
+            )
     lines.extend(["", "Decision：READY"])
     return "\n".join(lines)
 
 
-def _execute_step(step: dict[str, Any]) -> int:
+def _execute_step(
+    step: dict[str, Any], output: BinaryIO | None = None
+) -> int:
     env = os.environ.copy()
     env.update(step["env"])
     result = subprocess.run(
@@ -505,8 +531,88 @@ def _execute_step(step: dict[str, Any]) -> int:
         cwd=step["cwd"],
         env=env,
         check=False,
+        stdout=output,
+        stderr=subprocess.STDOUT if output is not None else None,
     )
     return result.returncode
+
+
+_PRIMARY_BUILD_ERROR_RE = re.compile(
+    r"fatal error:|(?<![A-Za-z])error:|undefined reference|"
+    r"no rule to make target|collect2: error|killed signal terminated program",
+    re.IGNORECASE,
+)
+_FALLBACK_BUILD_ERROR_RE = re.compile(r"\*\*\*|\bfailed\b", re.IGNORECASE)
+_LINUX_FAILURE_TAIL_LINES = 30
+_LINUX_SUMMARY_LINE_LIMIT = 1200
+
+
+def _new_linux_log_path(manifest: dict[str, Any]) -> Path:
+    log_dir = _linux_log_dir(manifest)
+    log_dir.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now().astimezone().strftime("%Y%m%dT%H%M%S%z")
+    base = log_dir / f"build-{stamp}-{os.getpid()}"
+    candidate = base.with_suffix(".log")
+    suffix = 1
+    while candidate.exists():
+        candidate = Path(f"{base}-{suffix}.log")
+        suffix += 1
+    return candidate
+
+
+def _write_linux_log_marker(handle: BinaryIO, text: str) -> None:
+    handle.write((text + "\n").encode("utf-8", errors="replace"))
+    handle.flush()
+
+
+def _bounded_summary_line(line: str) -> str:
+    line = line.rstrip("\r\n")
+    if len(line) <= _LINUX_SUMMARY_LINE_LIMIT:
+        return line
+    return line[:_LINUX_SUMMARY_LINE_LIMIT] + " ... [truncated]"
+
+
+def _linux_failure_summary(log_path: Path) -> tuple[str | None, list[str]]:
+    first_primary: str | None = None
+    first_fallback: str | None = None
+    tail: deque[str] = deque(maxlen=_LINUX_FAILURE_TAIL_LINES)
+    with log_path.open("r", encoding="utf-8", errors="replace") as handle:
+        for raw_line in handle:
+            line = _bounded_summary_line(raw_line)
+            tail.append(line)
+            is_marker = line.startswith(
+                ("[component ", "[step ", "cwd: ", "command: ", "exit_code: ")
+            )
+            if (
+                not is_marker
+                and first_primary is None
+                and _PRIMARY_BUILD_ERROR_RE.search(line)
+            ):
+                first_primary = line
+            if (
+                not is_marker
+                and first_fallback is None
+                and _FALLBACK_BUILD_ERROR_RE.search(line)
+            ):
+                first_fallback = line
+    return first_primary or first_fallback, list(tail)
+
+
+def _report_linux_failure(log_path: Path) -> None:
+    first_error, tail = _linux_failure_summary(log_path)
+    print(f"compile-tool: full Linux build log: {log_path}", file=sys.stderr)
+    if first_error is not None:
+        print(
+            f"compile-tool: first detected build error: {first_error}",
+            file=sys.stderr,
+        )
+    if tail:
+        print(
+            f"compile-tool: Linux build log tail (last {len(tail)} lines):",
+            file=sys.stderr,
+        )
+        for line in tail:
+            print(line, file=sys.stderr)
 
 
 def execute_v1(request: dict[str, Any]) -> int:
@@ -527,6 +633,17 @@ def execute_v1(request: dict[str, Any]) -> int:
 def execute_v2(request: dict[str, Any], assessment: dict[str, Any]) -> int:
     manifest = request["_manifest"]
     units = request["compile"]["units"]
+    linux_log_path = (
+        _new_linux_log_path(manifest) if manifest["target"] == "linux" else None
+    )
+    started_at = time.monotonic()
+    if linux_log_path is not None:
+        linux_log_path.write_bytes(b"")
+        print(
+            "compile-tool: Linux build output is being written to "
+            f"{linux_log_path}",
+            flush=True,
+        )
     for unit_index, unit in enumerate(units, start=1):
         print(
             f"\n[执行组件 {unit_index}/{len(units)}] "
@@ -548,12 +665,36 @@ def execute_v2(request: dict[str, Any], assessment: dict[str, Any]) -> int:
                 f"[执行命令 {step_index}/{len(unit['steps'])}] {step['name']}",
                 flush=True,
             )
-            result = _execute_step(step)
+            if linux_log_path is None:
+                result = _execute_step(step)
+            else:
+                with linux_log_path.open("ab") as log_handle:
+                    _write_linux_log_marker(
+                        log_handle,
+                        "\n"
+                        f"[component {unit_index}/{len(units)}: "
+                        f"{unit['component']} / {unit['action'].upper()}]",
+                    )
+                    _write_linux_log_marker(
+                        log_handle,
+                        f"[step {step_index}/{len(unit['steps'])}: "
+                        f"{step['name']}]",
+                    )
+                    _write_linux_log_marker(log_handle, f"cwd: {step['cwd']}")
+                    _write_linux_log_marker(
+                        log_handle, f"command: {step['command']}"
+                    )
+                    result = _execute_step(step, output=log_handle)
+                    _write_linux_log_marker(
+                        log_handle, f"exit_code: {result}"
+                    )
             if result != 0:
                 print(
                     f"compile-tool: step failed with exit code {result}: {step['name']}",
                     file=sys.stderr,
                 )
+                if linux_log_path is not None:
+                    _report_linux_failure(linux_log_path)
                 return result
         record_successful_unit(
             manifest,
@@ -561,5 +702,12 @@ def execute_v2(request: dict[str, Any], assessment: dict[str, Any]) -> int:
             unit["component"],
         )
         print(f"compile-tool: recorded {unit['component']} state", flush=True)
+    if linux_log_path is not None:
+        duration = time.monotonic() - started_at
+        print(
+            "compile-tool: Linux build completed successfully; "
+            f"duration={duration:.1f}s; full log={linux_log_path}",
+            flush=True,
+        )
     print("\ncompile-tool: all compile units completed")
     return 0

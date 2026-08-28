@@ -10,8 +10,10 @@
 
 ## 使用边界
 
-本工具不解析 Makefile、Kbuild 或 west manifest，不生成 recipe，也不替代
-compile target、项目 `USAGE.md` 和工程判断。
+本工具通常不解析 Makefile、Kbuild 或 west manifest，也不生成 recipe。唯一
+例外是 imx-mkimage：工具只读取选定 ref 的 `soc.mak` target 依赖来识别 M
+payload 文件名，不执行 Make recipe。具体编译方法仍由 compile target、项目
+`USAGE.md` 和工程判断负责。
 
 它不要求所有编译都填写 SoC、silicon revision、封装、板型、DDR 和软件版本。
 普通参数可以省略，也可以明确标成 assumption/default。只有
@@ -66,12 +68,19 @@ manifest/request 执行都会被阻断。
 
 M SDK 使用专用公开清单
 `records/compile/m_freertos_sdk/compile.yaml`。清单可以声明多个独立 job，
-工具按登记 SDK 版本自动选择 legacy 或 West backend，源码构建固定发布同源
+工具按本轮实际 SDK 版本自动选择 legacy 或 West backend，源码构建固定发布同源
 ELF+BIN，预编译只允许执行校验、复制和发布。AI 同样不能填写 backend、命令、
 输出路径或内部 manifest/request。
 
-`imx-mkimage` 还会按 `compile_targets/flashbin/RECIPE_CONTRACTS.yaml` 检查
-当前 `SOC + recipe` 的 producer 角色、输入槽位和隔离源码内落位。当前先覆盖
+SDK 发布包需要登录 NXP 获取，compile-tool 不自动下载。本地缺少清单选择的包
+时，`prepare` 返回 `USER_INPUT_REQUIRED`，AI 必须找用户要对应包；用户下载后
+可把包放入当前 case 并在清单填写 `archive/sdk_release/trust_reason`。工具只对
+本轮选中的包计算和比较 SHA-256，状态摘要仍由一次 `prepare` 自动完成。
+
+`imx-mkimage` 从选定源码 ref 的 `<SOC>/soc.mak` 提取 recipe 的 M payload
+文件名，再按 producer identity 检查类型、SoC、core role 和隔离源码内落位；
+`compile_targets/flashbin/RECIPE_CONTRACTS.yaml` 不再复制 M 镜像列表。当前完整
+非 M producer/fixed-input 合同先覆盖
 `iMX94/iMX95` 的 `flash_a55` 与 `flash_all`；其它 recipe 不会被静默放行。
 固定 AHAB/DDR firmware 同时绑定
 `compile_targets/flashbin/FIXED_ASSETS.yaml`；工具校验 role、目标文件名和
@@ -126,6 +135,23 @@ compile-tool run <request>
 
 `prepare` 完整显示显式参数、状态摘要、LLM 决策范围、cwd、环境变量和
 原始 shell 命令；`run` 重新读取并校验当前 request 后直接执行。
+
+## Linux 长构建日志
+
+仅当 schema v2 manifest 的 `target: linux` 时，`run` 使用长构建输出策略。
+这个判断不依赖命令文本里是否出现 `make` 或 `kernel`：
+
+- 编译进程的 stdout/stderr 完整写入
+  `work/<case>/logs/compile/linux/build-<time>-<pid>.log`
+- 正常编译行不流式回传给 AI
+- 工具以 shell 进程退出和退出码判定结束，不把“日志暂停增长”
+  误判为编译完成
+- 成功时只回传耗时和完整日志路径
+- 失败时回传退出码、第一个可识别错误、最后 30 行和完整日志路径
+
+`zephyr`、`a55_rtos`、flashbin 和项目公共清单不使用该策略，
+保持原有输出行为。日志静默只能作为可能卡住的辅助信号，
+不是成功或失败证据。
 
 assessment hash、source acquisition hash 和 state integrity hash 继续保留，
 因为它们分别用于状态过期、源码准备计划和状态损坏检测，不用于绑定

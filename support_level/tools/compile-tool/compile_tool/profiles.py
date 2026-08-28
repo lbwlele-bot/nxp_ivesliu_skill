@@ -408,6 +408,53 @@ def _normalize_input_contract(
     }
 
 
+def _normalize_make_recipe_inputs(
+    raw_value: Any,
+    label: str,
+    parameters: dict[str, dict[str, Any]],
+    artifact_inputs: dict[str, dict[str, Any]],
+) -> dict[str, Any] | None:
+    if raw_value is None:
+        return None
+    raw = mapping_value(raw_value, label)
+    reject_unknown_keys(
+        raw,
+        {
+            "soc_parameter",
+            "recipe_parameter",
+            "m_payload_slot",
+            "soc_identity_overrides",
+        },
+        label,
+    )
+    soc_parameter = _safe_id(raw.get("soc_parameter"), f"{label}.soc_parameter")
+    recipe_parameter = _safe_id(
+        raw.get("recipe_parameter"), f"{label}.recipe_parameter"
+    )
+    for parameter in (soc_parameter, recipe_parameter):
+        if parameter not in parameters:
+            raise ToolError(f"{label} references unknown parameter: {parameter}")
+    slot = _safe_id(raw.get("m_payload_slot"), f"{label}.m_payload_slot")
+    if slot not in artifact_inputs:
+        raise ToolError(f"{label}.m_payload_slot references unknown artifact slot: {slot}")
+    overrides_raw = mapping_value(
+        raw.get("soc_identity_overrides") or {},
+        f"{label}.soc_identity_overrides",
+    )
+    overrides = {
+        _safe_id(name, f"{label}.soc_identity_overrides key"): _safe_id(
+            value, f"{label}.soc_identity_overrides.{name}"
+        )
+        for name, value in overrides_raw.items()
+    }
+    return {
+        "soc_parameter": soc_parameter,
+        "recipe_parameter": recipe_parameter,
+        "m_payload_slot": slot,
+        "soc_identity_overrides": overrides,
+    }
+
+
 def profile_path(project: str) -> Path:
     project_id = _safe_id(project, "project")
     return (PROJECTS_ROOT / project_id / PROFILE_NAME).resolve(strict=False)
@@ -469,6 +516,7 @@ def load_compile_profile(project_or_path: str | Path) -> dict[str, Any]:
             "checklist_build",
             "input_contract",
             "fixed_asset_contract",
+            "make_recipe_inputs",
         },
         "compile profile",
     )
@@ -578,6 +626,12 @@ def load_compile_profile(project_or_path: str | Path) -> dict[str, Any]:
         parameters,
         support_level,
     )
+    make_recipe_inputs = _normalize_make_recipe_inputs(
+        raw.get("make_recipe_inputs"),
+        "compile profile.make_recipe_inputs",
+        parameters,
+        artifact_inputs,
+    )
     normalized = {
         "schema_version": 1,
         "path": str(path),
@@ -609,6 +663,7 @@ def load_compile_profile(project_or_path: str | Path) -> dict[str, Any]:
         "checklist_build": checklist_build,
         "input_contract": input_contract,
         "fixed_asset_contract": fixed_asset_contract,
+        "make_recipe_inputs": make_recipe_inputs,
     }
     normalized["hash"] = hash_data(
         {key: value for key, value in normalized.items() if key not in {"path", "hash"}}

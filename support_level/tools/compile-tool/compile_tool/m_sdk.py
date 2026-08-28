@@ -80,6 +80,7 @@ def _case_path(value: Any, label: str, case_root: Path) -> Path:
 
 
 def _catalog() -> dict[str, dict[str, Any]]:
+    """Load package metadata without probing every archive on disk."""
     root = mapping_value(load_yaml(CATALOG_PATH, "M SDK package catalog"), "M SDK package catalog")
     reject_unknown_keys(root, {"schema_version", "kind", "packages"}, "M SDK package catalog")
     if root.get("schema_version") != 1 or root.get("kind") != "m_freertos_sdk_package_catalog":
@@ -106,13 +107,6 @@ def _catalog() -> dict[str, dict[str, Any]]:
         archive = (CATALOG_PATH.parent / archive_relative).resolve(strict=False)
         require_within(archive, CATALOG_PATH.parent.resolve(), f"{label}.archive")
         expected_hash = normalize_hash(_scalar(item.get("sha256"), f"{label}.sha256"))
-        if not archive.is_file():
-            raise ToolError(f"M SDK package archive is unavailable: {archive}")
-        actual_hash = hash_file(archive)
-        if actual_hash != expected_hash:
-            raise ToolError(
-                f"M SDK package hash mismatch for {package}: expected {expected_hash}, got {actual_hash}"
-            )
         boards_raw = mapping_value(item.get("boards"), f"{label}.boards")
         boards: dict[str, dict[str, str]] = {}
         for board_id, board_value in boards_raw.items():
@@ -145,6 +139,102 @@ def _catalog() -> dict[str, dict[str, Any]]:
             ),
         }
     return result
+
+
+def _package_required(
+    package_id: str,
+    *,
+    archive: Path | None,
+    sdk_release: str | None,
+) -> ToolError:
+    location = str(archive) if archive is not None else "当前 case 的 inputs/sdk/ 目录"
+    release = sdk_release or "请按目标板和软件栈确认"
+    return ToolError(
+        "STATUS: USER_INPUT_REQUIRED\n"
+        "INPUT: NXP MCUX SDK package\n"
+        f"PACKAGE: {package_id}\n"
+        f"SDK_RELEASE: {release}\n"
+        f"EXPECTED_LOCATION: {location}\n"
+        "ACTION: 请用户登录 NXP 下载对应官方 SDK；AI 不自动登录或下载。"
+    )
+
+
+def _resolve_package(
+    sdk: dict[str, Any],
+    case_root: Path,
+) -> dict[str, Any]:
+    reject_unknown_keys(
+        sdk,
+        {"package", "archive", "sdk_release", "trust_reason", "compiler"},
+        "M SDK checklist.sdk",
+    )
+    package_id = _safe_id(sdk.get("package"), "M SDK checklist.sdk.package")
+    catalog = _catalog()
+    known = catalog.get(package_id)
+    archive_value = sdk.get("archive")
+
+    if archive_value is None:
+        if known is None:
+            raise _package_required(package_id, archive=None, sdk_release=None)
+        archive = Path(known["archive"])
+        if not archive.is_file():
+            raise _package_required(
+                package_id,
+                archive=archive,
+                sdk_release=known["sdk_release"],
+            )
+        actual_hash = hash_file(archive)
+        if actual_hash != known["sha256"]:
+            raise ToolError(
+                f"M SDK package hash mismatch for registered package {package_id}: expected "
+                f"{known['sha256']}, got {actual_hash}; place the user-provided package "
+                "in the current case and set sdk.archive plus sdk.trust_reason"
+            )
+        if sdk.get("sdk_release") is not None and str(sdk["sdk_release"]) != known["sdk_release"]:
+            raise ToolError("M SDK checklist.sdk.sdk_release conflicts with the known package")
+        if sdk.get("trust_reason") is not None:
+            raise ToolError("M SDK checklist.sdk.trust_reason is only for a case-provided package")
+        return {**known, "assurance": "catalog_verified"}
+
+    archive = _case_path(archive_value, "M SDK checklist.sdk.archive", case_root)
+    release = (
+        _scalar(sdk.get("sdk_release"), "M SDK checklist.sdk.sdk_release")
+        if sdk.get("sdk_release") is not None
+        else known["sdk_release"] if known is not None else None
+    )
+    if not archive.is_file():
+        raise _package_required(package_id, archive=archive, sdk_release=release)
+    if release is None:
+        raise ToolError(
+            "M SDK checklist.sdk.sdk_release is required for an unregistered user-provided package"
+        )
+    trust_reason = (
+        _scalar(sdk.get("trust_reason"), "M SDK checklist.sdk.trust_reason")
+        if sdk.get("trust_reason") is not None
+        else None
+    )
+    actual_hash = hash_file(archive)
+    catalog_match = known is not None and actual_hash == known["sha256"]
+    if known is not None and release != known["sdk_release"]:
+        raise ToolError("M SDK checklist.sdk.sdk_release conflicts with the known package")
+    if not catalog_match and trust_reason is None:
+        raise ToolError(
+            "M SDK checklist.sdk.trust_reason is required when the case-provided package "
+            "does not match a known catalog hash"
+        )
+    return {
+        "id": package_id,
+        "archive": str(archive),
+        "sha256": actual_hash,
+        "sdk_release": release,
+        "soc": known["soc"] if known is not None else None,
+        "boards": known["boards"] if catalog_match else {},
+        "compiler_version_contains": (
+            known["compiler_version_contains"] if known is not None else None
+        ),
+        "assurance": "catalog_verified" if catalog_match else "user_attested",
+        "trust_reason": trust_reason,
+    }
 
 
 def select_backend(sdk_release: str) -> str:
@@ -373,12 +463,8 @@ def normalize_m_sdk_checklist(path: Path) -> dict[str, Any]:
         raise ToolError(f"M SDK checklist must be stored at {expected_path}")
 
     sdk = mapping_value(raw.get("sdk"), "M SDK checklist.sdk")
-    reject_unknown_keys(sdk, {"package", "compiler"}, "M SDK checklist.sdk")
-    package_id = _safe_id(sdk.get("package"), "M SDK checklist.sdk.package")
-    packages = _catalog()
-    if package_id not in packages:
-        raise ToolError(f"M SDK package is not registered: {package_id}")
-    package = packages[package_id]
+    package = _resolve_package(sdk, case_root)
+    package_id = package["id"]
     backend = select_backend(package["sdk_release"])
     archive = _Archive(Path(package["archive"]))
     _validate_backend_layout(archive, backend)
@@ -426,17 +512,18 @@ def normalize_m_sdk_checklist(path: Path) -> dict[str, Any]:
         configuration = _safe_id(
             item.get("build_configuration"), f"{label}.build_configuration"
         )
-        if soc.casefold() != package["soc"].casefold():
+        if package.get("soc") is not None and soc.casefold() != package["soc"].casefold():
             raise ToolError(f"{label}.soc does not match registered package SoC {package['soc']}")
-        if board not in package["boards"]:
-            raise ToolError(f"{label}.board is not registered for {package_id}: {board}")
-        expected_role = package["boards"][board].get(core)
-        if expected_role is None:
-            raise ToolError(f"{label}.core is not registered for {package_id}/{board}: {core}")
-        if expected_role != core_role:
-            raise ToolError(
-                f"{label}.core_role mismatch: {core} is registered as {expected_role}"
-            )
+        if package["boards"]:
+            if board not in package["boards"]:
+                raise ToolError(f"{label}.board is not registered for {package_id}: {board}")
+            expected_role = package["boards"][board].get(core)
+            if expected_role is None:
+                raise ToolError(f"{label}.core is not registered for {package_id}/{board}: {core}")
+            if expected_role != core_role:
+                raise ToolError(
+                    f"{label}.core_role mismatch: {core} is registered as {expected_role}"
+                )
         normalized: dict[str, Any] = {
             "id": job,
             "mode": mode,
@@ -573,6 +660,7 @@ def materialize_m_sdk_manifest(
                 "details": {
                     "package": checklist["package"]["id"],
                     "package_sha256": checklist["package"]["sha256"],
+                    "package_assurance": checklist["package"]["assurance"],
                     "backend": checklist["backend"],
                 },
             }
@@ -590,13 +678,18 @@ def materialize_m_sdk_manifest(
             provenance = job["provenance"]
             formats = list(provenance["artifacts"])
             assurance = (
-                "catalog_verified" if provenance["kind"] == "vendor_package" else "user_attested"
+                checklist["package"]["assurance"]
+                if provenance["kind"] == "vendor_package"
+                else "user_attested"
             )
             details = {
                 "package": checklist["package"]["id"],
                 "package_sha256": checklist["package"]["sha256"],
+                "package_assurance": checklist["package"]["assurance"],
                 "provenance_kind": provenance["kind"],
             }
+            if checklist["package"].get("trust_reason"):
+                details["package_trust_reason"] = checklist["package"]["trust_reason"]
             if provenance.get("trust_reason"):
                 details["trust_reason"] = provenance["trust_reason"]
             origin = {"mode": "prebuilt_import", "assurance": assurance, "details": details}
@@ -787,6 +880,7 @@ def _render_plan(
         f"SDK 包：{checklist['package']['id']}",
         f"SDK 版本：{checklist['package']['sdk_release']}",
         f"受控 backend：{checklist['backend']}",
+        f"SDK 包证据：{checklist['package']['assurance']}",
         f"包 SHA-256：{checklist['package']['sha256']}",
         f"编译器：{checklist['compiler']}",
         "",
@@ -812,6 +906,11 @@ def _render_plan(
             "",
             "本轮直接范围：" + (", ".join(checklist["intent"]["scope"]) or "无（全部复用）"),
             f"理由：{checklist['intent']['reason']}",
+            "软件状态：" + (
+                "PENDING_SOURCE_ACQUISITION"
+                if assessment["status"] == "ACQUIRE_REQUIRED"
+                else assessment["state_summary"]
+            ),
         ]
     )
     if assessment["status"] == "ACQUIRE_REQUIRED":

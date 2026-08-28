@@ -131,11 +131,21 @@ input_contract:
 fixed_asset_contract:
   path: compile_targets/flashbin/FIXED_ASSETS.yaml
   selectors: [soc, silicon_revision, lpddr_type, oei_enabled]
+
+make_recipe_inputs:
+  soc_parameter: soc
+  recipe_parameter: recipe
+  m_payload_slot: m_payload
+  soc_identity_overrides: {iMX94: imx943}
 ```
 
-profile 存储该矩阵的 hash。对于 mkimage，矩阵校验每个 recipe 需要
-哪些 producer/file role、应使用哪个 slot、必须暂存到哪个目标路径，
-以及 OP-TEE 与 ATF `SPD=opteed` 等跨 producer 关系。
+profile 存储该矩阵的 hash。对于 mkimage，矩阵校验非 M producer/file role、
+slot、目标路径以及 OP-TEE 与 ATF `SPD=opteed` 等跨 producer 关系。
+
+`make_recipe_inputs` 让工具从选定源码 ref 的 `<SOC>/soc.mak` 安全读取 target
+依赖，不执行 Make recipe，并自动得出 M payload 文件名。M producer 的类型仍由
+artifact slot 约束，SoC/core role 由文件名和少量无法从 Makefile 表达的 SoC
+identity override 补充；解析结果和 `soc.mak` hash 进入组件配置指纹。
 
 `fixed_asset_contract` 使用同样的参数矩阵绑定固定二进制。
 它对 role、slot、mkimage 目标文件名和 SHA-256 做精确校验；因此 AI

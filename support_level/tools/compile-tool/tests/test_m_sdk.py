@@ -130,6 +130,7 @@ class MSdkChecklistTests(unittest.TestCase):
         jobs: dict,
         *,
         scope: list[str] | None = None,
+        sdk: dict | None = None,
     ) -> Path:
         path = case / "records" / "compile" / "m_freertos_sdk" / "compile.yaml"
         path.write_text(
@@ -139,7 +140,7 @@ class MSdkChecklistTests(unittest.TestCase):
                     "kind": "m_freertos_sdk_compile_checklist",
                     "target": "m_freertos_sdk",
                     "case_root": str(case),
-                    "sdk": {"package": "SDK_FIXTURE", "compiler": str(compiler)},
+                    "sdk": sdk or {"package": "SDK_FIXTURE", "compiler": str(compiler)},
                     "jobs": jobs,
                     "intent": {
                         "scope": list(jobs) if scope is None else scope,
@@ -173,6 +174,72 @@ class MSdkChecklistTests(unittest.TestCase):
         with self.assertRaisesRegex(ToolError, "unsupported M SDK release format"):
             m_sdk.select_backend("release-latest")
 
+    def test_missing_selected_package_requests_user_input(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            archive = self._legacy_archive(root)
+            catalog = self._catalog(root, archive)
+            catalog_archive = catalog.parent / archive.name
+            catalog_archive.unlink()
+            compiler = self._compiler(root)
+            case = self._case(root)
+            checklist = self._checklist(case, compiler, {"m7": self._source_job()})
+            with patch.object(m_sdk, "CATALOG_PATH", catalog):
+                with self.assertRaisesRegex(ToolError, "STATUS: USER_INPUT_REQUIRED"):
+                    m_sdk.normalize_m_sdk_checklist(checklist)
+
+    def test_unrelated_missing_catalog_package_does_not_block_selected_package(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            archive = self._legacy_archive(root)
+            catalog = self._catalog(root, archive)
+            raw = yaml.safe_load(catalog.read_text())
+            raw["packages"]["SDK_MISSING_UNUSED"] = {
+                **raw["packages"]["SDK_FIXTURE"],
+                "archive": "missing-unused.zip",
+            }
+            catalog.write_text(yaml.safe_dump(raw, sort_keys=False))
+            compiler = self._compiler(root)
+            case = self._case(root)
+            checklist = self._checklist(case, compiler, {"m7": self._source_job()})
+            with patch.object(m_sdk, "CATALOG_PATH", catalog):
+                normalized = m_sdk.normalize_m_sdk_checklist(checklist)
+            self.assertEqual(normalized["package"]["id"], "SDK_FIXTURE")
+
+    def test_user_provided_unregistered_sdk_builds_without_catalog_edit(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            archive = self._legacy_archive(root)
+            catalog = self._catalog(root, archive)
+            compiler = self._compiler(root)
+            case = self._case(root)
+            supplied = case / "inputs" / "sdk" / "customer-sdk.tar.gz"
+            supplied.parent.mkdir(parents=True)
+            supplied.write_bytes(archive.read_bytes())
+            checklist = self._checklist(
+                case,
+                compiler,
+                {"m7": self._source_job()},
+                sdk={
+                    "package": "CUSTOMER_SDK_25_09",
+                    "archive": str(supplied.relative_to(case)),
+                    "sdk_release": "25.09.00",
+                    "trust_reason": "user downloaded this package from NXP",
+                    "compiler": str(compiler),
+                },
+            )
+            with patch.object(m_sdk, "CATALOG_PATH", catalog):
+                with redirect_stdout(io.StringIO()):
+                    self.assertEqual(m_sdk.prepare_m_sdk_checklist(checklist), 0)
+                    self.assertEqual(m_sdk.run_m_sdk_checklist(checklist), 0)
+                normalized = m_sdk.normalize_m_sdk_checklist(checklist)
+                manifest = m_sdk.materialize_m_sdk_manifest(normalized)
+                state = load_state(manifest)["components"]["m7"]
+            self.assertEqual(normalized["package"]["assurance"], "user_attested")
+            self.assertEqual(
+                state["origin"]["details"]["package_assurance"], "user_attested"
+            )
+
     def test_legacy_source_build_exports_sibling_elf_and_bin(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
@@ -186,6 +253,7 @@ class MSdkChecklistTests(unittest.TestCase):
                 with redirect_stdout(prepared_output):
                     self.assertEqual(m_sdk.prepare_m_sdk_checklist(checklist_path), 0)
                 self.assertIn("受控 backend：legacy", prepared_output.getvalue())
+                self.assertIn("软件状态：PENDING_SOURCE_ACQUISITION", prepared_output.getvalue())
                 self.assertIn("build_release.sh", prepared_output.getvalue())
                 with redirect_stdout(io.StringIO()):
                     self.assertEqual(m_sdk.run_m_sdk_checklist(checklist_path), 0)

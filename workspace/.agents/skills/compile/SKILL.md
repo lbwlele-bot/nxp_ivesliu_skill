@@ -181,10 +181,18 @@ Linux、Zephyr、A55 RTOS 和后续普通 target
 - `records/compile/<target>/manifest.yaml`
 - `records/compile/<target>/request.yaml`
 
+`target: linux` 是窄化的长构建例外：`run` 将编译 stdout/stderr
+完整写入 case 的 `logs/compile/linux/`，以进程退出判定结束，
+成功只返回耗时与日志路径，失败才返回受限摘要。
+不要在外层反复读取该日志判断进度。这个例外不传播到
+Zephyr、A55 RTOS、flashbin 或 M SDK。
+
 调用流程仍是 `assess -> 必要时 acquire -> prepare -> run`。
 manifest 只列本次实际需要的 component、明确来源、配置、工具、
 watched inputs、产物和已知依赖。工具只传播 manifest 明确写出的
-`depends_on`，不解析 Makefile、Kbuild 或 west manifest，也不补猜未知依赖。
+`depends_on`，不补猜未知依赖。imx-mkimage 是一个窄例外：工具只读取选定
+ref 的 `soc.mak` target 依赖以得到 M payload 文件名，不执行 Make recipe；
+普通 target 仍不解析 Makefile、Kbuild 或 west manifest。
 
 普通通用状态单元只能使用 `rebuild`；公开清单生成的受控预编译单元可使用
 `import`。文件级增量和 `west build` 是否使用
@@ -201,7 +209,7 @@ schema v1 只保留给尚未纳入软件状态维护的临时命令；
 或其它真实编译命令。
 这些原始命令仍由当前 compile target、项目 `USAGE.md`
 和工程判断决定，`compile-tool` 只负责显式展示、绑定和执行，
-不生成 recipe，也不解析 Makefile。
+不生成 recipe；前述 imx-mkimage `soc.mak` 依赖读取不改变这一边界。
 
 ### 先只保留到“编译对象 + 最小依赖集合”这一层
 

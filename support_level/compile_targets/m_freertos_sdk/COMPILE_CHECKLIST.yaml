@@ -10,6 +10,11 @@ case_root: TBD
 sdk:
   package: TBD
   compiler: TBD
+  # 如果登记包本地不存在，compile-tool 返回 USER_INPUT_REQUIRED；AI 必须
+  # 找用户要对应官方包，不能登录下载或拿相近版本替代。用户提供后可增加：
+  # archive: inputs/sdk/SDK_xxx.zip
+  # sdk_release: '25.12.00'
+  # trust_reason: 用户确认该包由其 NXP 账号下载
 
 jobs:
   example:

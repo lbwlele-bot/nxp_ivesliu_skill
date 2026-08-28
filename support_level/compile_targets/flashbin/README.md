@@ -65,10 +65,11 @@ records/compile/imx-mkimage/compile.yaml
 producer 依赖 flash.bin。
 
 `RECIPE_CONTRACTS.yaml` 当前只放行 `iMX94/iMX95` 的 `flash_a55`、`flash_all`，
-并约束必需 producer、artifact slot 和 mkimage 落位。
+并约束非 M producer、artifact slot 和身份关系。M payload 集合和 mkimage
+落位由选定源码 ref 的 `<SOC>/soc.mak` 动态得出。
 `FIXED_ASSETS.yaml` 对本地已知 i.MX95 B0 LPDDR5 和 i.MX943 A0
 LPDDR4/LPDDR5 的 AHAB/DDR firmware 做 role、暂存名和 SHA-256 绑定。
-M payload 独立 producer 和 SCFW release-package producer 仍未完成迁移；旧
+M payload 已接入独立 producer；SCFW release-package producer 仍未完成迁移。旧
 `records/compile-manifest.yaml`、`DEPENDENCIES.yaml` 和本目录 policy 继续兼容，
 不能删除或当作已经废弃。
 
@@ -186,12 +187,12 @@ make SOC=iMX95 REV=B0 OEI=YES LPDDR_TYPE=lpddr5 flash_all
 先经 `records/compile/m_freertos_sdk/compile.yaml` 的受控 import，形成来源、
 身份和输出哈希齐全的 producer 状态。
 
-当前 `RECIPE_CONTRACTS.yaml` 对含 M payload 的路径固定要求：
+当前 `soc.mak` 给出 M payload 文件集合，compile-tool 再固定 producer identity：
 
 - `iMX95/flash_all`：一个 `core_role=m7` 的 i.MX95 BIN；
 - `iMX94/flash_all`：分别一个 `core_role=m33s/m70/m71` 的 i.MX943 BIN。
 
-recipe contract 同时固定它们在隔离 mkimage 源码中的目标文件名。ELF 只保留给
+目标文件名直接来自 `soc.mak`。ELF 只保留给
 后续 Linux remoteproc consumer，不允许作为 flash.bin 输入。旧深度 manifest
 在不含 M payload 时继续兼容；凡含 M payload 都必须满足 producer 成功状态、
 当前文件哈希、SoC、core role 和 artifact type 检查。

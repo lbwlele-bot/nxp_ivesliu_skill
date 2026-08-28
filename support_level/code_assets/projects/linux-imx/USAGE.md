@@ -91,6 +91,13 @@ make ARCH=arm64 CROSS_COMPILE=$CROSS_COMPILE O=build imx_v8_defconfig
 make ARCH=arm64 CROSS_COMPILE=$CROSS_COMPILE O=build -j$(nproc) Image dtbs modules
 ```
 
+并行度默认先使用 `-j$(nproc)`，不要在 case 模板里写死 `-j16`。
+`nproc` 返回的是逻辑 CPU 数；对散热受限的笔记本 CPU，
+过度超配可能因热降频、调度和内存压力反而变慢。
+如果实测 `-j$(nproc)` 持续触发热降频，应在同一源码、配置和冷/热缓存条件下
+比较 `-j<物理核数>` 与 `-j<逻辑 CPU 数>`，用总耗时选择，
+不用瞬时频率或 CPU 型号名称代替实测。
+
 只构建指定 dtb：
 
 ```bash

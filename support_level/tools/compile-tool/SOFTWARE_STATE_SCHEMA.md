@@ -162,7 +162,8 @@ M producer 用此方式记录 `soc/board/core/core_role/application/`
 
 - `managed_git`：单仓 detached worktree
 - `managed_git_set`：manifest 明确列出的多个仓
-- `release_archive`：本地 tar/zip 安全解包
+- `release_archive`：本地 tar/zip 安全解包；归档可位于共享 release package
+  目录，也可由用户提供在当前 case，但不能放进自己的解包目录
 - `local_files`：case 内已有普通文件
 
 非 Git 目录只递归采集 component 显式声明的 `watched_inputs`。
@@ -211,7 +212,7 @@ work/<case>/state/software-state.yaml
 
 ```yaml
 schema_version: 2
-generated_by: compile-tool 3.7
+generated_by: compile-tool 3.8
 case: <case>
 targets:
   flashbin: {}
