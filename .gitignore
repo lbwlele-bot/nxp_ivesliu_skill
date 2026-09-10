@@ -17,6 +17,7 @@ workspace/*
 !workspace/.agents/
 workspace/docs/*
 !workspace/docs/README.md
+!workspace/docs/NXP_V2_WORKSPACE_PRESENTATION.md
 !workspace/docs/architecture-construction/
 workspace/docs/architecture-construction/*
 !workspace/docs/architecture-construction/README.md
@@ -62,6 +63,8 @@ workspace/.agents/skills/build-customer-release/**/*.pyc
 # Re-allow only our own entry docs and curated knowledge/routing files.
 support_level/*
 !support_level/README.md
+!support_level/Image/
+!support_level/SoC_material/
 !support_level/board_knowledge/
 !support_level/code_assets/
 !support_level/compile_targets/
@@ -73,6 +76,12 @@ support_level/*
 !support_level/toolchain/
 !support_level/tools/
 !support_level/work/
+
+support_level/Image/*
+!support_level/Image/README.md
+
+support_level/SoC_material/*
+!support_level/SoC_material/README.md
 
 support_level/board_knowledge/*
 !support_level/board_knowledge/README.md
