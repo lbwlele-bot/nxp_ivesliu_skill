@@ -44,6 +44,15 @@ workspace/.agents/skills/*
 !workspace/.agents/skills/support/
 !workspace/.agents/skills/understanding/
 !workspace/.agents/skills/build-customer-release/
+!workspace/.agents/skills/deepseek-teacher/
+workspace/.agents/skills/deepseek-teacher/*
+!workspace/.agents/skills/deepseek-teacher/SKILL.md
+!workspace/.agents/skills/deepseek-teacher/references/
+workspace/.agents/skills/deepseek-teacher/references/*
+!workspace/.agents/skills/deepseek-teacher/references/teaching-review.md
+!workspace/.agents/skills/deepseek-teacher/scripts/
+workspace/.agents/skills/deepseek-teacher/scripts/*
+!workspace/.agents/skills/deepseek-teacher/scripts/run_fresh_lesson.py
 workspace/.agents/skills/board-exec/*
 workspace/.agents/skills/compile/*
 workspace/.agents/skills/support/*
