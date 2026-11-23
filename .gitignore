@@ -53,6 +53,7 @@ workspace/.agents/skills/deepseek-teacher/references/*
 !workspace/.agents/skills/deepseek-teacher/scripts/
 workspace/.agents/skills/deepseek-teacher/scripts/*
 !workspace/.agents/skills/deepseek-teacher/scripts/run_fresh_lesson.py
+!workspace/.agents/skills/deepseek-teacher/scripts/test_run_fresh_lesson.py
 workspace/.agents/skills/board-exec/*
 workspace/.agents/skills/compile/*
 workspace/.agents/skills/support/*

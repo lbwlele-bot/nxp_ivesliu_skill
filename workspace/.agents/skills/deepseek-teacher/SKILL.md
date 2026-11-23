@@ -95,9 +95,9 @@ description: 通过全新 DeepSeek 会话独立做题，观察困难并按需改
 
 ## 接入与边界
 
-学生环境是 `/home/ives/桌面/NXP_ds_v1`。运行方式、权限配置与可观测性以其
-`support_level/tools/deepseek-harness/USAGE.md` 为准；需要记录全新会话时，
-可按该说明选用 [run_fresh_lesson.py](scripts/run_fresh_lesson.py) 等运行方式。
+学生工作区由当前任务确定，不绑定本机用户名、安装位置或固定目录名。
+具体运行方式、权限配置与可观测性查该工作区的工具说明；需要记录全新会话时，
+可选用 [run_fresh_lesson.py](scripts/run_fresh_lesson.py)，用其帮助查看接入参数。
 会话正常结束不自动等于工程成功；观察不到的活动不作推测。
 
 本 skill 及其引用只写教学方法，不容纳具体 case、板型、命令配方或工程检查清单。

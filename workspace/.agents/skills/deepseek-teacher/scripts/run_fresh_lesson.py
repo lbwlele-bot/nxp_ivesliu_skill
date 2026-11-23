@@ -5,22 +5,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
 
 
-DS_ROOT = Path("/home/ives/桌面/NXP_ds_v1")
-WORKSPACE = DS_ROOT / "workspace"
-DSH_BASE = DS_ROOT / "support_level/tools/deepseek-harness/dsh"
-DSH_WITH_BOARD_MCP = WORKSPACE / "dsh"
-PATCHES = {
-    "readonly": DS_ROOT / "support_level/tools/deepseek-harness/readonly.patch.yml",
-    "supervised-workspace": DS_ROOT
-    / "support_level/tools/deepseek-harness/supervised-workspace.patch.yml",
-    "supervised-compile": DS_ROOT
-    / "support_level/tools/deepseek-harness/supervised-compile.patch.yml",
-}
+PATCHES = ("readonly", "supervised-workspace", "supervised-compile")
 
 
 def events_from(text: str) -> list[dict]:
@@ -43,8 +34,20 @@ def captured_text(value: str | bytes | None) -> str:
     return value
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser()
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        description="Run a fresh DeepSeek session against an explicitly selected workspace.",
+        epilog=(
+            "The selected workspace must sit beside support_level/. Launchers and "
+            "patches are resolved from that environment, never the teacher's install. "
+            "Relative input paths are relative to the caller's current directory. "
+            "Output is buffered until completion or timeout; this is not a live monitor."
+        ),
+    )
+    parser.add_argument(
+        "--workspace", type=Path, required=True,
+        help="Student working directory, with sibling support_level/; no implicit default.",
+    )
     parser.add_argument("--prompt-file", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--patch", choices=sorted(PATCHES), default="readonly")
@@ -54,7 +57,21 @@ def main() -> int:
         help="Load the fixed board-task MCP. Off by default for offline lessons.",
     )
     parser.add_argument("--timeout", type=int, default=600)
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
+
+    workspace = args.workspace.expanduser().resolve()
+    if not workspace.is_dir():
+        print(f"WORKSPACE_MISSING: {workspace}", file=sys.stderr)
+        return 2
+    harness_dir = workspace.parent / "support_level/tools/deepseek-harness"
+    launcher = workspace / "dsh" if args.board_mcp else harness_dir / "dsh"
+    patch = harness_dir / f"{args.patch}.patch.yml"
+    if not launcher.is_file() or not os.access(launcher, os.X_OK):
+        print(f"LAUNCHER_NOT_EXECUTABLE: {launcher}", file=sys.stderr)
+        return 2
+    if not patch.is_file():
+        print(f"PATCH_MISSING: {patch}", file=sys.stderr)
+        return 2
 
     prompt_file = args.prompt_file.expanduser().resolve()
     output = args.output.expanduser().resolve()
@@ -73,18 +90,18 @@ def main() -> int:
         return 2
 
     command = [
-        str(DSH_WITH_BOARD_MCP if args.board_mcp else DSH_BASE),
+        str(launcher),
         "--profile",
         "headless",
         "--patch",
-        str(PATCHES[args.patch]),
+        str(patch),
         "--json",
         prompt,
     ]
     try:
         completed = subprocess.run(
             command,
-            cwd=WORKSPACE,
+            cwd=workspace,
             text=True,
             capture_output=True,
             timeout=args.timeout,
